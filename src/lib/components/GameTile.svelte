@@ -17,6 +17,9 @@
 
 <style>
   .tile {
+    width: 160px;
+    height: 290px;
+    overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);

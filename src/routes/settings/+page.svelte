@@ -1,89 +1,74 @@
 <script lang="ts">
-  import { settings, toggleTab, moveTab, setPerformanceMode } from "$lib/settings.svelte";
-  import { TABS } from "$lib/tabs";
+  import GameTile from "$lib/components/GameTile.svelte";
+  import VirtualGrid from "$lib/components/VirtualGrid.svelte";
+  import { FAKE_GAMES } from "$lib/fakeGames";
 
-  const rows = $derived(settings.order.map((id) => TABS.find((t) => t.id === id)!));
+  let query = $state("");
+  let sort = $state("name");
+  let onlyInstalled = $state(false);
+
+  const games = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    const list = FAKE_GAMES.filter(
+      (g) => g.name.toLowerCase().includes(q) && (!onlyInstalled || g.installed)
+    );
+    if (sort === "name") list.sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === "hours") list.sort((a, b) => b.hours - a.hours);
+    if (sort === "recent") list.sort((a, b) => b.lastPlayed - a.lastPlayed);
+    return list;
+  });
 </script>
 
-<h1>Settings</h1>
+<div class="page">
+  <h1>Library <span class="count">{games.length} games</span></h1>
 
-<section>
-  <h2>Tabs</h2>
-  <p class="dim">Turn tabs on or off and change their order. Library is always on.</p>
+  <div class="bar">
+    <input type="search" placeholder="Search games..." bind:value={query} />
 
-  <ul>
-    {#each rows as tab, i (tab.id)}
-      <li>
-        <span class:off={!settings.enabled[tab.id]}>{tab.label}</span>
+    <select bind:value={sort} aria-label="Sort by">
+      <option value="name">Name</option>
+      <option value="hours">Most played</option>
+      <option value="recent">Recently played</option>
+    </select>
 
-        <div class="controls">
-          <button onclick={() => moveTab(tab.id, -1)} disabled={i === 0} aria-label="Move up">↑</button>
-          <button onclick={() => moveTab(tab.id, 1)} disabled={i === rows.length - 1} aria-label="Move down">↓</button>
-
-          <button
-            class="switch"
-            role="switch"
-            aria-checked={settings.enabled[tab.id]}
-            aria-label={"Show " + tab.label}
-            disabled={tab.id === "library"}
-            onclick={() => toggleTab(tab.id)}
-          >
-            <span class="knob"></span>
-          </button>
-        </div>
-      </li>
-    {/each}
-  </ul>
-</section>
-
-<section>
-  <h2>Performance</h2>
-  <div class="row">
-    <div>
-      <strong>Performance mode</strong>
-      <p class="dim">Turns off animations and effects. Recommended for older PCs.</p>
-    </div>
-    <button
-      class="switch"
-      role="switch"
-      aria-checked={settings.performanceMode}
-      aria-label="Performance mode"
-      onclick={() => setPerformanceMode(!settings.performanceMode)}
-    >
-      <span class="knob"></span>
-    </button>
+    <label class="check">
+      <input type="checkbox" bind:checked={onlyInstalled} />
+      Installed only
+    </label>
   </div>
-</section>
+
+  {#if games.length === 0}
+    <p class="dim">No games match your search.</p>
+  {:else}
+    <div class="grid-wrap">
+      <VirtualGrid items={games} itemWidth={160} itemHeight={290} key={(g) => g.appid}>
+        {#snippet children(game)}
+          <GameTile {game} />
+        {/snippet}
+      </VirtualGrid>
+    </div>
+  {/if}
+</div>
 
 <style>
-  h1 { margin: 0 0 24px; font-size: 1.6rem; }
-  h2 { margin: 0 0 4px; font-size: 1.05rem; }
-  section { max-width: 560px; margin-bottom: 32px; }
-  .dim { color: var(--text-dim); margin: 0 0 12px; font-size: 0.9rem; }
-
-  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  li, .row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 14px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: var(--radius);
+  .page {
+    height: calc(100vh - 56px);
+    display: flex;
+    flex-direction: column;
   }
-  .off { color: var(--text-dim); text-decoration: line-through; }
-  .controls { display: flex; align-items: center; gap: 8px; }
-  .controls button:not(.switch) {
-    width: 30px; height: 30px; border-radius: 8px;
-    background: var(--surface-2); border: 1px solid var(--border);
+  h1 { margin: 0 0 16px; font-size: 1.6rem; }
+  .count { font-size: 0.9rem; font-weight: 400; color: var(--text-dim); margin-left: 8px; }
+  .bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+  input[type="search"], select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 8px 12px;
+    font: inherit;
   }
-  button:disabled { opacity: 0.35; cursor: default; }
-
-  .switch {
-    width: 40px; height: 22px; border-radius: 11px; padding: 2px;
-    background: var(--border); border: none; position: relative;
-    transition: background 0.15s;
-  }
-  .switch[aria-checked="true"] { background: var(--accent); }
-  .knob {
-    display: block; width: 18px; height: 18px; border-radius: 50%;
-    background: #fff; transition: transform 0.15s;
-  }
-  .switch[aria-checked="true"] .knob { transform: translateX(18px); }
+  input[type="search"] { flex: 1; max-width: 320px; }
+  .check { display: flex; gap: 6px; align-items: center; color: var(--text-dim); font-size: 0.9rem; }
+  .dim { color: var(--text-dim); }
+  .grid-wrap { flex: 1; min-height: 0; }
 </style>

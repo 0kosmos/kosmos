@@ -15,9 +15,14 @@ const names = [
   "Fable Forge", "Glass Harbor", "Zero Hour Cafe", "Ashen Trails",
 ];
 
-export const FAKE_GAMES: Game[] = names.map((name, i) => ({
+const TEST_COUNT = 2000;
+
+export const FAKE_GAMES: Game[] = Array.from({ length: TEST_COUNT }, (_, i) => ({
   appid: 1000 + i,
-  name,
+  name:
+    i < names.length
+      ? names[i]
+      : `${names[i % names.length]} ${Math.floor(i / names.length) + 1}`,
   hours: (i * 37) % 240,
   lastPlayed: Date.now() - ((i * 13) % 90) * 86400000,
   installed: i % 3 === 0,
