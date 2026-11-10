@@ -1,0 +1,39 @@
+:root {
+  --bg: #0e0f13;
+  --surface: #16181d;
+  --surface-2: #1d2027;
+  --border: #262a33;
+  --text: #e8eaf0;
+  --text-dim: #8a90a0;
+  --accent: #7c8cff;
+  --radius: 10px;
+  --sidebar-w: 220px;
+  font-family: system-ui, "Segoe UI Variable", "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Performance mode: switch off all animations */
+:root[data-perf="on"] *,
+:root[data-perf="on"] *::before,
+:root[data-perf="on"] *::after {
+  transition: none !important;
+  animation: none !important;
+}
