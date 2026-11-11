@@ -15,7 +15,7 @@ The developer is a beginner: explain changes simply and say which file each chan
 - Cache data, use virtualized lists, lazy-load tabs and features.
 - Never fetch data for the whole library at once (Steam rate limits).
 - No background polling unless truly needed; keep it slow and pause it when the window is hidden.
-- Performance mode and reduce motion must turn effects and animations off.
+- "Reduce motion" (the only motion/effects setting; performance mode was removed) must turn effects and animations off.
 - Themes use CSS variables in src/app.css (black default, light). No hard-coded colors.
 - Clean, modern, slightly polished look, not overdone.
 - No notifications, no in-game overlay, never inject into or hook games.

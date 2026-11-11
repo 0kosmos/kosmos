@@ -5,7 +5,7 @@ export type Theme = "dark" | "light";
 interface Settings {
   order: TabId[];
   enabled: Record<TabId, boolean>;
-  performanceMode: boolean;
+  reduceMotion: boolean;
   theme: Theme;
 }
 
@@ -15,7 +15,16 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, performanceMode: false, theme: "dark" };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), theme: "dark" };
+}
+
+// On first launch, start out matching Windows' "Show animations" setting
+function windowsReducesMotion(): boolean {
+  try {
+    return matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
 }
 
 function load(): Settings {
@@ -36,7 +45,14 @@ function load(): Settings {
 
     const theme: Theme = saved.theme === "light" ? "light" : "dark";
 
-    return { order, enabled, performanceMode: !!saved.performanceMode, theme };
+    return {
+      order,
+      enabled,
+      // Older versions had a separate "performance mode"; carry it over if it was on
+      reduceMotion:
+        typeof saved.reduceMotion === "boolean" ? saved.reduceMotion : !!saved.performanceMode,
+      theme,
+    };
   } catch {
     return base;
   }
@@ -66,8 +82,8 @@ export function moveTab(id: TabId, direction: -1 | 1) {
   save();
 }
 
-export function setPerformanceMode(on: boolean) {
-  settings.performanceMode = on;
+export function setReduceMotion(on: boolean) {
+  settings.reduceMotion = on;
   save();
 }
 

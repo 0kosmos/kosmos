@@ -11,7 +11,7 @@
   const isOff = $derived(currentTab ? !settings.enabled[currentTab.id] : false);
 
   $effect(() => {
-    document.documentElement.dataset.perf = settings.performanceMode ? "on" : "off";
+    document.documentElement.dataset.motion = settings.reduceMotion ? "reduced" : "full";
   });
 
   $effect(() => {

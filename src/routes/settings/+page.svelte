@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { settings, toggleTab, moveTab, setPerformanceMode, setTheme } from "$lib/settings.svelte";
+  import {
+    settings,
+    toggleTab,
+    moveTab,
+    setReduceMotion,
+    setTheme,
+  } from "$lib/settings.svelte";
   import { TABS } from "$lib/tabs";
 
   const rows = $derived(settings.order.map((id) => TABS.find((t) => t.id === id)!));
@@ -7,33 +13,51 @@
 
 <h1>Settings</h1>
 
+<!-- ---------- Appearance ---------- -->
 <section>
   <h2>Appearance</h2>
-  <div class="row">
-    <div>
-      <strong>Theme</strong>
-      <p class="dim">Black is the default. White is easier to read in bright rooms.</p>
+  <div class="group">
+    <div class="row">
+      <div>
+        <strong>Theme</strong>
+        <p class="dim">Black is the default. White is easier to read in bright rooms.</p>
+      </div>
+      <div class="segmented" role="radiogroup" aria-label="Theme">
+        <button role="radio" aria-checked={settings.theme === "dark"} onclick={() => setTheme("dark")}>Black</button>
+        <button role="radio" aria-checked={settings.theme === "light"} onclick={() => setTheme("light")}>White</button>
+      </div>
     </div>
-    <div class="segmented" role="radiogroup" aria-label="Theme">
-      <button role="radio" aria-checked={settings.theme === "dark"} onclick={() => setTheme("dark")}>Black</button>
-      <button role="radio" aria-checked={settings.theme === "light"} onclick={() => setTheme("light")}>White</button>
+
+    <div class="row">
+      <div>
+        <strong>Reduce motion</strong>
+        <p class="dim">Turns off animations and effects. Recommended for older PCs.</p>
+      </div>
+      <button
+        class="switch"
+        role="switch"
+        aria-checked={settings.reduceMotion}
+        aria-label="Reduce motion"
+        onclick={() => setReduceMotion(!settings.reduceMotion)}
+      >
+        <span class="knob"></span>
+      </button>
     </div>
   </div>
 </section>
 
+<!-- ---------- Sidebar tabs ---------- -->
 <section>
-  <h2>Tabs</h2>
-  <p class="dim">Turn tabs on or off and change their order. Library is always on.</p>
-
-  <ul>
+  <h2>Sidebar</h2>
+  <p class="dim intro">Turn tabs on or off and change their order. Library is always on.</p>
+  <div class="group">
     {#each rows as tab, i (tab.id)}
-      <li>
+      <div class="row tab">
         <span class:off={!settings.enabled[tab.id]}>{tab.label}</span>
 
         <div class="controls">
-          <button onclick={() => moveTab(tab.id, -1)} disabled={i === 0} aria-label="Move up">↑</button>
-          <button onclick={() => moveTab(tab.id, 1)} disabled={i === rows.length - 1} aria-label="Move down">↓</button>
-
+          <button class="arrow" onclick={() => moveTab(tab.id, -1)} disabled={i === 0} aria-label={"Move " + tab.label + " up"}>↑</button>
+          <button class="arrow" onclick={() => moveTab(tab.id, 1)} disabled={i === rows.length - 1} aria-label={"Move " + tab.label + " down"}>↓</button>
           <button
             class="switch"
             role="switch"
@@ -45,27 +69,22 @@
             <span class="knob"></span>
           </button>
         </div>
-      </li>
+      </div>
     {/each}
-  </ul>
+  </div>
 </section>
 
+<!-- ---------- Window behavior ---------- -->
 <section>
-  <h2>Performance</h2>
-  <div class="row">
-    <div>
-      <strong>Performance mode</strong>
-      <p class="dim">Turns off animations and effects. Recommended for older PCs.</p>
+  <h2>Window behavior</h2>
+  <div class="group">
+    <div class="row">
+      <div>
+        <strong>When I close the window</strong>
+        <p class="dim">Choosing between closing the app and minimizing to the system tray comes in a later update.</p>
+      </div>
+      <span class="badge">Close app</span>
     </div>
-    <button
-      class="switch"
-      role="switch"
-      aria-checked={settings.performanceMode}
-      aria-label="Performance mode"
-      onclick={() => setPerformanceMode(!settings.performanceMode)}
-    >
-      <span class="knob"></span>
-    </button>
   </div>
 </section>
 
@@ -75,34 +94,41 @@
     margin: 0 0 10px; font-size: var(--fs-sm); font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim);
   }
-  section { max-width: 600px; margin-bottom: 32px; }
-  .dim { color: var(--text-dim); margin: 0 0 12px; font-size: var(--fs-sm); }
-  .row .dim { margin: 2px 0 0; }
+  section { max-width: 600px; margin-bottom: 28px; }
+  .dim { color: var(--text-dim); margin: 2px 0 0; font-size: var(--fs-sm); }
+  .intro { margin: -4px 0 10px; }
   strong { font-weight: 600; font-size: var(--fs-md); }
 
-  ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  li, .row {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 12px 16px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: var(--radius);
-    transition: border-color 0.15s;
+  /* One card per section, rows separated by thin lines */
+  .group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
-  li:hover, .row:hover { border-color: color-mix(in srgb, var(--text-dim) 40%, var(--border)); }
-  li { padding: 8px 10px 8px 16px; font-size: var(--fs-md); }
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 12px 16px;
+    transition: background 0.15s;
+  }
+  .row + .row { border-top: 1px solid var(--border); }
+  .row:hover { background: var(--hover); }
+  .row.tab { padding: 8px 10px 8px 16px; font-size: var(--fs-md); }
+
   .off { color: var(--text-dim); text-decoration: line-through; }
   .controls { display: flex; align-items: center; gap: 6px; }
-  .controls button:not(.switch) {
+  .arrow {
     width: 30px; height: 30px; border-radius: var(--radius-sm);
     background: var(--surface-2); border: 1px solid var(--border);
-    transition: background 0.15s, border-color 0.15s;
+    transition: border-color 0.15s;
   }
-  .controls button:not(.switch):hover:not(:disabled) { border-color: var(--text-dim); }
-  .switch { flex-shrink: 0; margin-left: 6px; }
+  .arrow:hover:not(:disabled) { border-color: var(--text-dim); }
   button:disabled { opacity: 0.35; cursor: default; }
 
   .switch {
+    flex-shrink: 0; margin-left: 6px;
     width: 40px; height: 22px; border-radius: 11px; padding: 2px;
-    background: var(--border); border: none; position: relative;
+    background: var(--border); border: none;
     transition: background 0.15s;
   }
   .switch[aria-checked="true"] { background: var(--accent); }
@@ -113,9 +139,8 @@
   .switch[aria-checked="true"] .knob { transform: translateX(18px); }
 
   .segmented {
-    display: flex; gap: 2px; padding: 2px;
+    display: flex; gap: 2px; padding: 2px; flex-shrink: 0;
     background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
-    flex-shrink: 0;
   }
   .segmented button {
     padding: 5px 14px; border: none; border-radius: 4px; font-size: var(--fs-md);
@@ -123,4 +148,10 @@
   }
   .segmented button:hover { color: var(--text); }
   .segmented button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); }
+
+  .badge {
+    flex-shrink: 0; padding: 4px 10px; border-radius: var(--radius-sm);
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: var(--fs-sm);
+  }
 </style>

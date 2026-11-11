@@ -8,7 +8,7 @@ Kosmos doesn't replace Steam. Steam keeps running in the background, and Kosmos 
 
 ## Why Kosmos?
 
-- **Lighter:** built with Tauri instead of Electron, so it has a small install size and low memory use. It also has a performance mode that turns off animations for older PCs.
+- **Lighter:** built with Tauri instead of Electron, so it has a small install size and low memory use. It also has a "reduce motion" option that turns off animations for older PCs.
 - **Customizable:** turn tabs on or off and reorder them, so you only see what you use.
 - **Cleaner:** a minimal interface focused on your library and your games.
 - **Safe:** you sign in through Steam, and Kosmos never sees or stores your password.
@@ -17,14 +17,14 @@ Kosmos doesn't replace Steam. Steam keeps running in the background, and Kosmos 
 
 - Library with search, sorting and filters
 - Game pages with screenshots, details, reviews and a Play button that launches the game through Steam
-- Settings with tab management and performance mode
+- Black and white themes
+- Settings with tab management and reduce motion
 
 ## Coming soon
 
 - Store view, wishlist and price alerts
 - Workshop browser
 - Profile and friends
-- Themes (black and light)
 
 ## Built with
 

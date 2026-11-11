@@ -78,7 +78,7 @@
   .tile:hover {
     border-color: var(--accent);
     background: var(--surface-2);
-    transform: translateY(-2px);
+    transform: translateY(var(--lift)); /* 0 when reduce motion is on */
   }
   .cover {
     aspect-ratio: 2 / 3;

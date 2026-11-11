@@ -105,10 +105,20 @@ select:focus {
   scrollbar-color: var(--border) transparent;
 }
 
-/* Performance mode: switch off all animations */
-:root[data-perf="on"] *,
-:root[data-perf="on"] *::before,
-:root[data-perf="on"] *::after {
+/* Movement effects (like tiles lifting on hover) use this distance */
+:root {
+  --lift: -2px;
+}
+
+/* "Reduce motion" setting: switch off all animations, movement and effects.
+   (Only the app's own switch decides; it starts out matching Windows on first launch.) */
+:root[data-motion="reduced"] {
+  --lift: 0px;
+}
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
   transition: none !important;
   animation: none !important;
+  scroll-behavior: auto !important;
 }
