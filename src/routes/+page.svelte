@@ -6,6 +6,21 @@
   import { library, loadLibrary } from "$lib/library.svelte";
   import { view, saveView } from "$lib/libraryView.svelte";
   import { auth, startSignIn, cancelSignIn, signOut } from "$lib/auth.svelte";
+  import { refreshInstalled } from "$lib/installed.svelte";
+  import { playing } from "$lib/playing.svelte";
+
+  // Which games are installed (for the Play / Install buttons on the tiles).
+  // Read once when the library opens, when you come back to the window, and when a
+  // game starts or stops. One quick read for the whole library, no polling.
+  $effect(() => {
+    playing.appid;
+    refreshInstalled();
+  });
+  $effect(() => {
+    const onFocus = () => refreshInstalled();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  });
 
   const games = $derived.by(() => {
     const q = view.query.trim().toLowerCase();
@@ -118,7 +133,7 @@
       <p class="dim">No games match your search.</p>
     {:else}
       <div class="grid-wrap">
-        <VirtualGrid items={games} itemWidth={160} itemHeight={290} key={(g) => g.appid}>
+        <VirtualGrid items={games} itemWidth={160} itemHeight={318} key={(g) => g.appid}>
           {#snippet children(game)}
             <GameTile {game} />
           {/snippet}

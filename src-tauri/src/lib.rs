@@ -29,6 +29,35 @@ fn steam_app_state(appid: u32) -> AppState {
     AppState::default()
 }
 
+/// IDs of all games Steam has installed, read in one go from
+/// HKEY_CURRENT_USER\Software\Valve\Steam\Apps (each game has Installed = 1 there).
+/// Used by the library's Play / Install buttons, so they don't need one check per tile.
+#[tauri::command]
+fn installed_apps() -> Vec<u32> {
+    #[cfg(windows)]
+    {
+        let mut out = Vec::new();
+        if let Ok(apps) = windows_registry::CURRENT_USER.open(r"Software\Valve\Steam\Apps") {
+            if let Ok(names) = apps.keys() {
+                for name in names {
+                    let Ok(id) = name.parse::<u32>() else { continue };
+                    let installed = apps
+                        .open(&name)
+                        .and_then(|k| k.get_u32("Installed"))
+                        .map(|v| v != 0)
+                        .unwrap_or(false);
+                    if installed {
+                        out.push(id);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+    #[allow(unreachable_code)]
+    Vec::new()
+}
+
 // ---------- Currently playing ----------
 // Steam writes the running game's ID to HKCU\Software\Valve\Steam\RunningAppID (0 = none).
 // Instead of checking it again and again, a background thread asks Windows to wake it
@@ -131,7 +160,7 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![steam_app_state, running_app])
+        .invoke_handler(tauri::generate_handler![steam_app_state, running_app, installed_apps])
         .setup(|_app| {
             // Watch for the game Steam is running (for "Currently playing" in the sidebar)
             #[cfg(windows)]

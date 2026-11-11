@@ -2,8 +2,20 @@
   import type { Game } from "$lib/library.svelte";
   import { untrack } from "svelte";
   import { cachedCover, findCover } from "$lib/covers";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { installed } from "$lib/installed.svelte";
+  import { playing } from "$lib/playing.svelte";
 
   let { game }: { game: Game } = $props();
+
+  // Quick Play / Install button under the tile (Steam does the actual work)
+  const isInstalled = $derived(!installed.known || installed.ids.has(game.appid));
+  const isRunning = $derived(playing.appid === game.appid);
+
+  function quickAction() {
+    const link = isInstalled ? `steam://run/${game.appid}` : `steam://install/${game.appid}`;
+    openUrl(link).catch(() => {});
+  }
 
   const CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps";
 
@@ -43,29 +55,45 @@
   const hue = $derived((game.appid * 47) % 360);
 </script>
 
-<a class="tile" href={"/game?id=" + game.appid}>
-  <div class="cover" style="--hue: {hue}">
-    {#if current}
-      <img
-        src={current}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        onerror={() => attempt++}
-      />
-    {:else}
-      <span>{game.name}</span>
-    {/if}
-  </div>
-  <h3 title={game.name}>{game.name}</h3>
-  <p>{game.hours > 0 ? `${game.hours} h played` : "Never played"}</p>
-</a>
+<div class="tile">
+  <a class="open" href={"/game?id=" + game.appid}>
+    <div class="cover" style="--hue: {hue}">
+      {#if current}
+        <img
+          src={current}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onerror={() => attempt++}
+        />
+      {:else}
+        <span>{game.name}</span>
+      {/if}
+    </div>
+    <h3 title={game.name}>{game.name}</h3>
+    <p>{game.hours > 0 ? `${game.hours} h played` : "Never played"}</p>
+  </a>
+
+  {#if isRunning}
+    <div class="quick running"><span class="dot" aria-hidden="true"></span>Running</div>
+  {:else}
+    <button
+      class="quick"
+      class:install={!isInstalled}
+      onclick={quickAction}
+      aria-label={(isInstalled ? "Play " : "Install ") + game.name}
+    >
+      {isInstalled ? "▶ Play" : "⬇ Install"}
+    </button>
+  {/if}
+</div>
 
 <style>
   .tile {
-    display: block;
+    display: flex;
+    flex-direction: column;
     width: 160px;
-    height: 290px;
+    height: 318px;
     overflow: hidden;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -80,6 +108,31 @@
     background: var(--surface-2);
     transform: translateY(var(--lift)); /* 0 when reduce motion is on */
   }
+  .open { display: block; color: inherit; text-decoration: none; }
+
+  /* Small Play / Install button at the bottom of the tile */
+  .quick {
+    margin-top: auto;
+    height: 28px;
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 1px solid var(--accent);
+    transition: filter 0.15s;
+  }
+  button.quick:hover { filter: brightness(1.1); }
+  .quick.install { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+  button.quick.install:hover { filter: none; border-color: var(--text-dim); }
+  .quick.running {
+    background: color-mix(in srgb, var(--good) 18%, transparent);
+    border-color: transparent; color: var(--text);
+  }
+  .quick .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+
   .cover {
     aspect-ratio: 2 / 3;
     border-radius: var(--radius-sm);
