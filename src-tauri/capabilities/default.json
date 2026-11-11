@@ -16,7 +16,10 @@
         { "url": "steam://nav/downloads" },
         { "url": "steam://openurl/https://store.steampowered.com/recommended/recommendgame/*" },
         { "url": "steam://openurl/https://store.steampowered.com/app/*" },
-        { "url": "steam://openurl/https://steamcommunity.com/market/listings/*" }
+        { "url": "steam://openurl/https://steamcommunity.com/market/listings/*" },
+        { "url": "steam://friends/message/*" },
+        { "url": "steam://openurl/https://steamcommunity.com/profiles/*" },
+        { "url": "steam://openurl/https://steamcommunity.com/groups/*" }
       ]
     }
   ]

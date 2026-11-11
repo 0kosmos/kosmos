@@ -46,6 +46,9 @@ STORE [done]: Store tab with best deals (25%+ off, 80%+ reviews), search, filter
 
 MARKET [done]: Community Market tab: games (CS2, Dota 2, TF2, Rust, Steam items, PUBG...), each game's own categories (CS2: type, weapon, exterior, quality...), price range, sort, search, item details with Steam's exact prices, "Buy on Steam Market" (opens in the Steam client). Steam allows 10 items per request without login, so the Worker combines 3 pages per load and caches.
 
-LATER (not now): Friends, Community and Workshop pages.
+FRIENDS [done]: card grid with status, last online, pins, search, double-click to chat.
+GROUPS [done]: your groups, search all Steam groups, group details (avatar, headline, description, member stats, admins, moderators), Join on Steam.
+
+LATER (not now): Community and Workshop pages.
 
 Start with Phase 1, step 1 (the theme system), since everything else depends on it. After each step, tell me exactly how to test it and when to commit and push.

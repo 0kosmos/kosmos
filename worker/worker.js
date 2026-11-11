@@ -491,6 +491,125 @@ async function marketItem(appid, hash, currency) {
   };
 }
 
+// ---------- Steam groups ----------
+// Steam has no proper public groups API, so we read:
+//  - each group's public data feed (memberslistxml): name, headline, description, avatar, counts
+//  - the group's public page: its administrators and moderators
+//  - Steam's community search: finding groups by name
+const COMMUNITY = "https://steamcommunity.com";
+const GROUP_ID_BASE = 103582791429521408n; // group IDs: 64-bit = base + Steam's short group number
+const ACCOUNT_ID_BASE = 76561197960265728n; // player IDs: 64-bit = base + short account number
+
+// Group texts use Steam's forum markup ([b], [url=...], [h1]...): keep only the words
+function plainBBCode(s) {
+  return String(s || "")
+    .replace(/\[\/?[a-z0-9*]+(?:=[^\]]*)?\]/gi, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function xmlTag(xml, name) {
+  const m = new RegExp(`<${name}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${name}>`).exec(xml);
+  return m ? m[1].trim() : "";
+}
+
+// One group's details from its public data feed. `path` is "groups/<url>" or "gid/<64-bit id>".
+async function groupInfo(path) {
+  const res = await fetch(`${COMMUNITY}/${path}/memberslistxml/?xml=1`, {
+    headers: MARKET_HEADERS,
+    cf: { cacheTtl: 3600, cacheEverything: true },
+  });
+  if (!res.ok) return null;
+  const xml = await res.text();
+  const details = xmlTag(xml, "groupDetails");
+  if (!details) return null;
+  return {
+    id: xmlTag(xml, "groupID64"),
+    url: xmlTag(details, "groupURL"),
+    name: decodeEntities(xmlTag(details, "groupName")),
+    headline: decodeEntities(xmlTag(details, "headline")),
+    summary: plainBBCode(stripHtml(xmlTag(details, "summary"))).slice(0, 4000),
+    avatar: xmlTag(details, "avatarFull") || xmlTag(details, "avatarMedium"),
+    members: Number(xmlTag(details, "memberCount")) || 0,
+    online: Number(xmlTag(details, "membersOnline")) || 0,
+    inGame: Number(xmlTag(details, "membersInGame")) || 0,
+    inChat: Number(xmlTag(details, "membersInChat")) || 0,
+  };
+}
+
+// Search groups by name (Steam's community search; leaves out game hubs, which aren't groups)
+async function groupSearch(text, page) {
+  // Steam only wants a session cookie that matches the request; any random value works
+  const sid = [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const u = new URL(`${COMMUNITY}/search/SearchCommunityAjax`);
+  u.searchParams.set("text", text);
+  u.searchParams.set("filter", "groups");
+  u.searchParams.set("sessionid", sid);
+  u.searchParams.set("steamid_user", "false");
+  u.searchParams.set("page", String(page));
+  const res = await fetch(u.toString(), {
+    headers: { ...MARKET_HEADERS, Cookie: "sessionid=" + sid },
+    cf: { cacheTtl: 1800, cacheEverything: true },
+  });
+  if (!res.ok) throw new Error("Community answered " + res.status);
+  const d = await res.json();
+  const html = String(d.html || "");
+  const rows = html.split('class="search_row group"').slice(1);
+  const items = [];
+  for (const row of rows) {
+    const link = /href="https:\/\/steamcommunity\.com\/groups\/([^"/]+)"/.exec(row);
+    if (!link) continue; // game hub or something else, not a joinable group
+    const name = /class="searchPersonaName"[^>]*>([^<]*)</.exec(row);
+    const img = /<img src="([^"]+)"/.exec(row);
+    const members = /([\d,.]+)<\/span>\s*members/.exec(row);
+    const summary = /class="search_group_summary_text">([\s\S]*?)<\/div>/.exec(row);
+    items.push({
+      url: decodeURIComponent(link[1]),
+      name: decodeEntities((name && name[1]) || link[1]).trim(),
+      avatar: img ? img[1] : "",
+      members: members ? Number(members[1].replace(/[,.]/g, "")) : 0,
+      summary: summary ? plainBBCode(decodeEntities(summary[1].replace(/<[^>]+>/g, ""))).slice(0, 200) : "",
+    });
+  }
+  const total = Number(d.search_result_count) || 0;
+  return { items, total, next: rows.length ? page + 1 : -1 };
+}
+
+// Administrators and moderators, read from the group's public page
+async function groupStaff(url, env) {
+  const res = await fetch(`${COMMUNITY}/groups/${encodeURIComponent(url)}`, {
+    headers: MARKET_HEADERS,
+    cf: { cacheTtl: 3600, cacheEverything: true },
+  });
+  if (!res.ok) return { admins: [], mods: [] };
+  const html = await res.text();
+  const section = (title) => {
+    const i = html.indexOf(`> ${title} </div>`) >= 0 ? html.indexOf(`> ${title} </div>`) : html.search(new RegExp(`>\\s*${title}\\s*</div>`));
+    if (i < 0) return [];
+    const rest = html.slice(i);
+    const end = rest.indexOf("member_sectionheader", 30);
+    const part = end > 0 ? rest.slice(0, end) : rest.slice(0, 6000);
+    return [...part.matchAll(/data-miniprofile="(\d+)"/g)].map((m) => String(ACCOUNT_ID_BASE + BigInt(m[1])));
+  };
+  const adminIds = section("Administrators").slice(0, 20);
+  const modIds = section("Moderators").slice(0, 20);
+  const all = [...new Set([...adminIds, ...modIds])];
+  const people = {};
+  if (all.length) {
+    try {
+      const d = await steam("/ISteamUser/GetPlayerSummaries/v2/", { steamids: all.join(",") }, env, 86400);
+      for (const p of (d.response && d.response.players) || []) {
+        people[p.steamid] = { steamid: p.steamid, name: p.personaname || "", avatar: p.avatarmedium || "", online: Number(p.personastate) > 0 };
+      }
+    } catch {
+      /* show them without names */
+    }
+  }
+  const pick = (ids) => ids.map((id) => people[id] || { steamid: id, name: "", avatar: "", online: false });
+  return { admins: pick(adminIds), mods: pick(modIds) };
+}
+
 // PC specs a reviewer chose to share on Steam (null if they didn't)
 function cleanHardware(h) {
   if (!h || typeof h !== "object") return null;
@@ -996,6 +1115,21 @@ export default {
         return json({ error: "Not found" }, 404);
       }
 
+      // ---------- Steam groups: search and details (no Steam ID needed) ----------
+      if (url.pathname === "/groups/search") {
+        const text = (url.searchParams.get("q") || "").trim().slice(0, 100);
+        const page = /^\d{1,3}$/.test(url.searchParams.get("page") || "") ? Number(url.searchParams.get("page")) : 1;
+        if (!text) return json({ items: [], total: 0, next: -1 });
+        return json(await groupSearch(text, Math.max(page, 1)), 200, 1800);
+      }
+      if (url.pathname === "/groups/detail") {
+        const g = url.searchParams.get("url") || "";
+        if (!/^[A-Za-z0-9_\-.]{1,64}$/.test(g)) return json({ error: "Please add ?url=<group url>" }, 400);
+        const [info, staff] = await Promise.all([groupInfo("groups/" + g), groupStaff(g, env)]);
+        if (!info) return json({ error: "Group not found" }, 404);
+        return json({ ...info, ...staff }, 200, 3600);
+      }
+
       // ---------- News feed for several games (Library "News and updates" row) ----------
       // Latest 4 posts of each game (max 10 games), merged newest first, without the full text
       // (the app loads the full post from /news only when one is opened). Uses the same Steam
@@ -1124,6 +1258,62 @@ export default {
           profileUrl: p.profileurl,
           isPublic: p.communityvisibilitystate === 3,
         });
+      }
+
+      // ---------- Friends list with status ----------
+      // Steam gives the list of friend IDs; names, avatars and status come from player
+      // summaries, 100 friends per request. Status is only kept for a minute (it changes often).
+      if (url.pathname === "/friends") {
+        const list = await (async () => {
+          const u = new URL("https://api.steampowered.com/ISteamUser/GetFriendList/v1/");
+          u.searchParams.set("steamid", steamid);
+          u.searchParams.set("relationship", "friend");
+          u.searchParams.set("key", env.STEAM_API_KEY);
+          const res = await fetch(u, { cf: { cacheTtl: 300, cacheEverything: true } });
+          if (res.status === 401 || res.status === 403) return null; // friends list is private
+          if (!res.ok) throw new Error("Steam answered " + res.status);
+          return ((await res.json()).friendslist || {}).friends || [];
+        })();
+        if (list === null) return json({ private: true, friends: [] });
+
+        const since = Object.fromEntries(list.map((f) => [f.steamid, (f.friend_since || 0) * 1000]));
+        const ids = list.map((f) => f.steamid);
+        const chunks = [];
+        for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+        const pages = await Promise.all(
+          chunks.map((c) => steam("/ISteamUser/GetPlayerSummaries/v2/", { steamids: c.join(",") }, env, 60))
+        );
+        const friends = pages
+          .flatMap((d) => (d.response && d.response.players) || [])
+          .map((p) => ({
+            steamid: p.steamid,
+            name: p.personaname || "",
+            avatar: p.avatarmedium || "",
+            // 0 offline, 1 online, 2 busy, 3 away, 4 snooze, 5 looking to trade, 6 looking to play
+            state: Number(p.personastate) || 0,
+            game: p.gameextrainfo || "", // name of the game they're playing (if visible)
+            gameId: p.gameid ? Number(p.gameid) : 0,
+            lastOnline: (p.lastlogoff || 0) * 1000,
+            since: since[p.steamid] || 0,
+            profileUrl: p.profileurl || "",
+          }));
+        return json({ private: false, friends }, 200, 60);
+      }
+
+      // ---------- Your Steam groups ----------
+      if (url.pathname === "/groups/mine") {
+        const u = new URL("https://api.steampowered.com/ISteamUser/GetUserGroupList/v1/");
+        u.searchParams.set("steamid", steamid);
+        u.searchParams.set("key", env.STEAM_API_KEY);
+        const res = await fetch(u, { cf: { cacheTtl: 3600, cacheEverything: true } });
+        if (res.status === 401 || res.status === 403) return json({ private: true, groups: [] });
+        if (!res.ok) throw new Error("Steam answered " + res.status);
+        const d = (await res.json()).response || {};
+        if (d.success === false) return json({ private: true, groups: [] });
+        const ids = (d.groups || []).map((g) => String(GROUP_ID_BASE + BigInt(g.gid))).slice(0, 60);
+        const infos = await Promise.all(ids.map((id) => groupInfo("gid/" + id).catch(() => null)));
+        const groups = infos.filter(Boolean).sort((a, b) => b.members - a.members);
+        return json({ private: false, groups }, 200, 3600);
       }
 
       if (url.pathname === "/games") {

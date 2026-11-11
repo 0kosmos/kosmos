@@ -6,6 +6,7 @@ export type TabId =
   | "workshop"
   | "community"
   | "friends"
+  | "groups"
   | "profile";
 
 export interface Tab {
@@ -23,6 +24,7 @@ export const TABS: Tab[] = [
   { id: "workshop", label: "Workshop", path: "/workshop", icon: "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z M12 12l8-4.5 M12 12v9 M12 12L4 7.5" },
   { id: "community", label: "Community", path: "/community", icon: "M4 5h16v11H9l-5 4V5z" },
   { id: "friends", label: "Friends", path: "/friends", icon: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6 M17 11a2.5 2.5 0 1 0 0-5 M17 14c2.2 0 4 1.8 4 4" },
+  { id: "groups", label: "Groups", path: "/groups", icon: "M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M2 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5 M12.5 15c1-.3 2.2-.5 3.5-.5 3.3 0 6 2.5 6 5.5" },
   { id: "profile", label: "Profile", path: "/profile", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" },
 ];
 
