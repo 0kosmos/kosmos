@@ -6,6 +6,7 @@
   import { fetchGameInfo, fetchReviews, type GameInfo, type Review } from "$lib/gameInfo";
   import NewsRow from "$lib/components/NewsRow.svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { playing } from "$lib/playing.svelte";
 
   // ---------- Installed / updating state (read from Steam's registry entry) ----------
   type AppState = { installed: boolean; updating: boolean; running: boolean };
@@ -22,15 +23,21 @@
     }
   }
 
-  // Check when the game opens, and again when you come back to the window
-  // (e.g. after installing in Steam). No polling.
+  // Check when the game opens, when you come back to the window (e.g. after installing
+  // in Steam), and when a game starts or stops. No polling.
   $effect(() => {
     appid;
-    appState = null;
+    appState = null; // new game: forget the old one's state
     refreshAppState();
     const onFocus = () => refreshAppState();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
+  });
+
+  // A game started or stopped: re-read (e.g. an update may have finished), without clearing first
+  $effect(() => {
+    playing.appid;
+    refreshAppState();
   });
 
   async function steamLink(link: string) {
@@ -44,6 +51,9 @@
 
   const appid = $derived(Number(page.url.searchParams.get("id")));
   const mine = $derived(library.games.find((g) => g.appid === appid));
+
+  // "Running" follows the live signal the sidebar uses, so it disappears as soon as the game closes
+  const isRunning = $derived(!!appid && playing.appid === appid);
 
   let info = $state<GameInfo | null>(null);
   let status = $state<"loading" | "ready" | "error">("loading");
@@ -205,7 +215,12 @@
         <img class="hero" src={info.header} alt="" />
       {/if}
       <div class="meta">
-        <h1>{title}</h1>
+        <div class="title-row">
+          <h1>{title}</h1>
+          {#if isRunning}
+            <span class="badge running"><span class="dot" aria-hidden="true"></span>Running</span>
+          {/if}
+        </div>
         {#if info.available}
           <!-- Steam's popular tags (falls back to genres if Steam sent no tags) -->
           {@const tags = info.tags?.length ? info.tags : (info.genres ?? [])}
@@ -259,8 +274,6 @@
 
           {#if appState?.updating}
             <span class="badge">Steam is updating this game</span>
-          {:else if appState?.running}
-            <span class="badge">Running</span>
           {/if}
           {#if mine}<span class="dim">{mine.hours} h played</span>{/if}
           {#if playError}<span class="err">{playError}</span>{/if}
@@ -486,6 +499,13 @@
     background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
     transition: border-color 0.15s;
   }
+  .title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .title-row h1 { margin: 0; }
+  .badge.running {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+    background: color-mix(in srgb, var(--good) 18%, transparent);
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
   .chip-more {
     font-size: 0.8rem; padding: 3px 10px; border-radius: 999px;
     background: transparent; border: 1px dashed var(--border); color: var(--text-dim);

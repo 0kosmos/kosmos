@@ -5,6 +5,15 @@
   import { TABS, SETTINGS_TAB, type Tab, type TabId } from "$lib/tabs";
   import Icon from "./Icon.svelte";
   import { flip } from "svelte/animate";
+  import { playing } from "$lib/playing.svelte";
+  import { library } from "$lib/library.svelte";
+
+  // Name of the running game: from your library first, then Steam's registry entry
+  const playingName = $derived(
+    playing.appid
+      ? (library.games.find((g) => g.appid === playing.appid)?.name || playing.name || "a game")
+      : ""
+  );
 
   const EYE_OFF =
     "M3 3l18 18 M10.6 10.6a2 2 0 0 0 2.8 2.8 M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7-.4 1-1.2 2.3-2.4 3.5 M6.6 6.6C4.4 8 2.8 10.1 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.6-1.3";
@@ -150,6 +159,16 @@
     {/if}
   </nav>
 
+  {#if playing.appid}
+    <a class="playing" href={"/game?id=" + playing.appid} title="Open this game's page">
+      <span class="live" aria-hidden="true"></span>
+      <span class="playing-text">
+        <span class="label">Currently playing</span>
+        <span class="game">{playingName}</span>
+      </span>
+    </a>
+  {/if}
+
   <div class="bottom">
     <a href={SETTINGS_TAB.path} class:active={page.url.pathname === SETTINGS_TAB.path}>
       <Icon d={SETTINGS_TAB.icon} />
@@ -247,6 +266,21 @@
     color: var(--text-dim);
   }
   .hidden-link:hover { background: none; text-decoration: underline; }
+
+  /* ---------- Currently playing ---------- */
+  .playing {
+    gap: 10px; padding: 10px 12px; margin-bottom: 4px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  .playing:hover { border-color: var(--good); }
+  .live {
+    flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+    /* No pulsing animation on purpose: it would keep the app redrawing while you play */
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent);
+  }
+  .playing-text { display: flex; flex-direction: column; min-width: 0; }
+  .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+  .game { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .bottom {
     border-top: 1px solid var(--border);

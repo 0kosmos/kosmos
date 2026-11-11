@@ -6,12 +6,14 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { listenForSignIn } from "$lib/auth.svelte";
+  import { watchPlaying } from "$lib/playing.svelte";
 
   let { children } = $props();
 
   // Catch the kosmos:// link the browser opens after Steam sign-in
   onMount(() => {
     listenForSignIn();
+    watchPlaying();
   });
 
   const currentTab = $derived(TABS.find((t) => t.path === page.url.pathname));
