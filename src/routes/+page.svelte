@@ -132,21 +132,13 @@
     display: flex;
     flex-direction: column;
   }
-  h1 { margin: 0 0 16px; font-size: 1.6rem; }
-  h2 { margin: 0 0 8px; font-size: 1.2rem; }
-  .count { font-size: 0.9rem; font-weight: 400; color: var(--text-dim); margin-left: 8px; }
-  .bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
-  input, select {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    padding: 8px 12px;
-    font: inherit;
-  }
+  h1 { margin: 0 0 18px; font-size: 1.6rem; font-weight: 700; display: flex; align-items: baseline; }
+  h2 { margin: 0 0 8px; font-size: 1.15rem; }
+  .count { font-size: var(--fs-md); font-weight: 400; color: var(--text-dim); margin-left: 10px; }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
   input[type="search"] { flex: 1; max-width: 320px; min-width: 160px; }
   .dim { color: var(--text-dim); }
-  .err { color: #ff8a8a; margin: 8px 0 0; }
+  .err { color: var(--bad); margin: 8px 0 0; }
   .grid-wrap { flex: 1; min-height: 0; }
   .card {
     max-width: 520px;
@@ -160,17 +152,23 @@
   .row input { flex: 1; }
   button.primary {
     background: var(--accent);
-    color: #0e0f13;
+    color: var(--on-accent);
     border: none;
     border-radius: var(--radius);
     padding: 8px 16px;
     font-weight: 600;
+    transition: filter 0.15s;
   }
+  button.primary:hover { filter: brightness(1.1); }
   button.ghost {
+    margin-left: auto;
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 8px 12px;
+    font-size: var(--fs-md);
     color: var(--text-dim);
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
+  button.ghost:hover { background: var(--hover); color: var(--text); border-color: var(--text-dim); }
 </style>

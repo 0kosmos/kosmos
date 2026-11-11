@@ -5,6 +5,15 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tauri + SvelteKit + Typescript App</title>
+    <script>
+      // Apply the saved theme before anything is drawn, so there is no flash of the wrong theme.
+      try {
+        var s = JSON.parse(localStorage.getItem("kosmos-settings-v1") || "{}");
+        document.documentElement.dataset.theme = s.theme === "light" ? "light" : "dark";
+      } catch (e) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

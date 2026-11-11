@@ -25,3 +25,5 @@ The developer is a beginner: explain changes simply and say which file each chan
 - Make small changes, one step at a time.
 - After each step, say how to test it.
 - Remind me to commit when a step works.
+
+- The full roadmap is in PLAN.md. Do one step at a time, then stop and wait for me to confirm it works before the next step.

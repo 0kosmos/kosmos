@@ -3,23 +3,38 @@
 
   let { game }: { game: Game } = $props();
 
-  let failed = $state(false);
+  const CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps";
+
+  // Images to try, in order. If one fails to load we move to the next.
+  // When all fail, we show the colored letter tile.
+  const sources = $derived([
+    { url: `${CDN}/${game.appid}/library_600x900.jpg`, wide: false }, // tall cover art
+    { url: `${CDN}/${game.appid}/header.jpg`, wide: true },           // wide store header
+    { url: `${CDN}/${game.appid}/capsule_616x353.jpg`, wide: true },  // wide capsule
+  ]);
+
+  let attempt = $state(0);
+  const current = $derived(sources[attempt]);
   const hue = $derived((game.appid * 47) % 360);
-  const cover = $derived(
-    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/library_600x900.jpg`
-  );
 </script>
 
 <a class="tile" href={"/game?id=" + game.appid}>
   <div class="cover" style="--hue: {hue}">
-    {#if failed}
-      <span>{game.name.charAt(0)}</span>
+    {#if current}
+      <img
+        src={current.url}
+        class:wide={current.wide}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onerror={() => attempt++}
+      />
     {:else}
-      <img src={cover} alt="" loading="lazy" decoding="async" onerror={() => (failed = true)} />
+      <span>{game.name.charAt(0)}</span>
     {/if}
   </div>
   <h3 title={game.name}>{game.name}</h3>
-  <p>{game.hours} h played</p>
+  <p>{game.hours > 0 ? `${game.hours} h played` : "Never played"}</p>
 </a>
 
 <style>
@@ -34,15 +49,16 @@
     padding: 8px;
     color: inherit;
     text-decoration: none;
-    transition: border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
   }
   .tile:hover {
     border-color: var(--accent);
     background: var(--surface-2);
+    transform: translateY(-2px);
   }
   .cover {
     aspect-ratio: 2 / 3;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     display: grid;
     place-items: center;
@@ -51,6 +67,7 @@
   .cover span {
     font-size: 2.6rem;
     font-weight: 700;
+    color: #fff; /* sits on the generated colored tile, same in both themes */
     opacity: 0.85;
   }
   img {
@@ -59,16 +76,22 @@
     object-fit: cover;
     display: block;
   }
+  /* Wide images: show the whole image centered on the colored tile instead of cropping it */
+  img.wide {
+    height: auto;
+    object-fit: contain;
+  }
   h3 {
     margin: 8px 2px 2px;
-    font-size: 0.9rem;
+    font-size: var(--fs-md);
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   p {
     margin: 0 2px 2px;
-    font-size: 0.8rem;
+    font-size: var(--fs-sm);
     color: var(--text-dim);
   }
 </style>

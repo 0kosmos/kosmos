@@ -1,9 +1,12 @@
 import { TABS, type TabId } from "./tabs";
 
+export type Theme = "dark" | "light";
+
 interface Settings {
   order: TabId[];
   enabled: Record<TabId, boolean>;
   performanceMode: boolean;
+  theme: Theme;
 }
 
 const KEY = "kosmos-settings-v1";
@@ -12,7 +15,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, performanceMode: false };
+  return { order: [...ALL_IDS], enabled, performanceMode: false, theme: "dark" };
 }
 
 function load(): Settings {
@@ -31,7 +34,9 @@ function load(): Settings {
     const enabled = { ...base.enabled, ...saved.enabled };
     enabled.library = true; // Library can never be turned off
 
-    return { order, enabled, performanceMode: !!saved.performanceMode };
+    const theme: Theme = saved.theme === "light" ? "light" : "dark";
+
+    return { order, enabled, performanceMode: !!saved.performanceMode, theme };
   } catch {
     return base;
   }
@@ -63,5 +68,10 @@ export function moveTab(id: TabId, direction: -1 | 1) {
 
 export function setPerformanceMode(on: boolean) {
   settings.performanceMode = on;
+  save();
+}
+
+export function setTheme(theme: Theme) {
+  settings.theme = theme;
   save();
 }

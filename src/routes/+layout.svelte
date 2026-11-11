@@ -13,6 +13,10 @@
   $effect(() => {
     document.documentElement.dataset.perf = settings.performanceMode ? "on" : "off";
   });
+
+  $effect(() => {
+    document.documentElement.dataset.theme = settings.theme;
+  });
 </script>
 
 <div class="app">

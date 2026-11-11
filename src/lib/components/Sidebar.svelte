@@ -36,7 +36,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 16px 12px;
+    padding: 18px 12px 12px;
     background: var(--surface);
     border-right: 1px solid var(--border);
     height: 100%;
@@ -45,7 +45,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 10px 16px;
+    padding: 2px 12px 18px;
     font-weight: 700;
     font-size: 1.1rem;
     letter-spacing: 0.02em;
@@ -55,6 +55,7 @@
     height: 10px;
     border-radius: 50%;
     background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
   }
   nav {
     display: flex;
@@ -63,27 +64,39 @@
     flex: 1;
   }
   a {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 9px 12px;
+    padding: 8px 12px;
     border-radius: var(--radius);
     color: var(--text-dim);
     text-decoration: none;
-    font-size: 0.95rem;
+    font-size: var(--fs-md);
+    font-weight: 500;
     transition: background 0.15s, color 0.15s;
   }
   a:hover {
-    background: var(--surface-2);
+    background: var(--hover);
     color: var(--text);
   }
   a.active {
     background: var(--surface-2);
     color: var(--text);
-    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  /* Small accent bar on the left of the active tab */
+  a.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
   }
   .bottom {
     border-top: 1px solid var(--border);
-    padding-top: 8px;
+    padding-top: 10px;
   }
 </style>

@@ -178,7 +178,7 @@
   h1 { margin: 0 0 6px; font-size: 1.8rem; }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .dim { color: var(--text-dim); margin: 0; }
-  .err { color: #ff8a8a; }
+  .err { color: var(--bad); }
   .top { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; }
   .hero { width: 320px; max-width: 100%; border-radius: var(--radius); display: block; }
   .meta { flex: 1; min-width: 260px; }
@@ -189,7 +189,7 @@
   }
   .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
   .play {
-    background: var(--accent); color: #0e0f13; border: none;
+    background: var(--accent); color: var(--on-accent); border: none;
     border-radius: var(--radius); padding: 10px 28px; font-weight: 700; font-size: 1rem;
   }
   .play:hover { filter: brightness(1.1); }
@@ -207,8 +207,8 @@
   .reviews { display: flex; flex-direction: column; gap: 10px; }
   .review { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
   .rhead { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
-  .good { color: #7fd69a; }
-  .bad { color: #ff8a8a; }
+  .good { color: var(--good); }
+  .bad { color: var(--bad); }
   .clamp { display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
   details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
   summary { cursor: pointer; font-weight: 600; }
