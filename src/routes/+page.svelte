@@ -36,7 +36,8 @@
   }
 
   const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
-  import { auth, startSignIn, cancelSignIn, signOut } from "$lib/auth.svelte";
+  import { signOut } from "$lib/auth.svelte";
+  import SignInCard from "$lib/components/SignInCard.svelte";
   import { refreshInstalled } from "$lib/installed.svelte";
   import { playing } from "$lib/playing.svelte";
 
@@ -105,27 +106,7 @@
 
 <div class="page">
   {#if !account.steamid}
-    <div class="card">
-      {#if auth.waiting}
-        <h1>Finish signing in in your browser</h1>
-        <p class="dim">
-          Steam's login page is open in your browser. When you're done there, Kosmos will continue
-          on its own.
-        </p>
-        <div class="row">
-          <button class="primary" onclick={startSignIn}>Open the login page again</button>
-          <button class="ghost" onclick={cancelSignIn}>Cancel</button>
-        </div>
-      {:else}
-        <h1>Sign in to see your games</h1>
-        <p class="dim">
-          You'll sign in on Steam's own website in your browser. Kosmos never sees or stores your
-          password.
-        </p>
-        <button class="primary" onclick={startSignIn}>Sign in through Steam</button>
-      {/if}
-      {#if auth.error}<p class="err">{auth.error}</p>{/if}
-    </div>
+    <SignInCard />
   {:else}
     <!-- Title, search and controls on one row (like the Store) -->
     <div class="bar">
@@ -212,7 +193,6 @@
   .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
   input[type="search"] { flex: 1; max-width: 320px; min-width: 160px; }
   .dim { color: var(--text-dim); }
-  .err { color: var(--bad); margin: 8px 0 0; }
   /* ---------- Filters + games ---------- */
   .content {
     position: relative; flex: 1; min-height: 0; display: grid; gap: 14px;

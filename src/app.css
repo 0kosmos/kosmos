@@ -6,23 +6,23 @@
    Switching only changes the attribute, so it is instant. */
 
 :root {
-  /* Black theme (default) */
+  /* Black theme (default). Pure neutral greys, no color tint, to match the logo. */
   --bg: #000000;        /* true black page background */
-  --surface: #0b0b0c;   /* cards, sidebar */
-  --surface-2: #141416; /* raised parts inside cards */
-  --border: #1f1f23;
-  --text: #ececef;
-  --text-dim: #8c8c94;
-  --accent: #7c8cff;
+  --surface: #0c0c0c;   /* cards, sidebar */
+  --surface-2: #161616; /* raised parts inside cards */
+  --border: #242424;
+  --text: #ededed;
+  --text-dim: #8a8a8a;
+  --accent: #f2f2f2;    /* "Mono" accent; see the accent colors below */
   --on-accent: #000000; /* text drawn on top of the accent color */
-  --good: #7fd69a;
-  --bad: #ff8a8a;
-  --knob: #ffffff; /* the dot inside on/off switches */
+  --good: #6fcf8e;
+  --bad: #f87171;
+  --knob: #ffffff; /* the dot inside on/off switches when they're off */
 
   --hover: rgba(255, 255, 255, 0.05); /* faint highlight behind hovered items */
   --scrim: rgba(0, 0, 0, 0.6); /* dimmed background behind popups */
   /* Arrow inside dropdowns (same grey as dim text) */
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%238c8c94' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%238a8a8a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   /* Shared sizes, so every page uses the same corners and type */
   --radius: 10px;    /* cards, tiles, inputs, buttons */
@@ -35,22 +35,53 @@
 }
 
 :root[data-theme="light"] {
-  --bg: #f4f4f6;
+  --bg: #f5f5f5;
   --surface: #ffffff;
-  --surface-2: #ececf0;
-  --border: #dcdce2;
-  --text: #16161a;
-  --text-dim: #62626c;
-  --accent: #5b6cf0; /* same blue, a bit deeper so it reads well on white */
+  --surface-2: #efefef;
+  --border: #e0e0e0;
+  --text: #171717;
+  --text-dim: #6b6b6b;
+  --accent: #171717;
   --on-accent: #ffffff;
-  --good: #1f8a45;
-  --bad: #d23c3c;
+  --good: #16a34a;
+  --bad: #dc2626;
   --knob: #ffffff;
   --hover: rgba(0, 0, 0, 0.04);
-  --scrim: rgba(20, 20, 26, 0.45);
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2362626c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --scrim: rgba(20, 20, 20, 0.45);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%236b6b6b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme: light;
 }
+
+/* ---------- Accent colors ----------
+   The color of buttons, switches, links and the open tab. Picked by data-accent="..."
+   (on <html> for the whole app, or on any element, e.g. the color swatches in Settings).
+   Each has a brighter version for the black theme and a deeper one for the white theme,
+   so it reads well on both. "Mono" (white / black, like the logo) is the default. */
+[data-accent="mono"] { --accent: #f2f2f2; --on-accent: #000000; }
+[data-accent="violet"] { --accent: #a78bfa; --on-accent: #000000; }
+[data-accent="teal"] { --accent: #2dd4bf; --on-accent: #000000; }
+[data-accent="amber"] { --accent: #fbbf24; --on-accent: #000000; }
+[data-accent="rose"] { --accent: #fb7185; --on-accent: #000000; }
+[data-accent="blue"] { --accent: #60a5fa; --on-accent: #000000; }
+[data-accent="red"] { --accent: #f87171; --on-accent: #000000; }
+[data-accent="orange"] { --accent: #fb923c; --on-accent: #000000; }
+[data-accent="emerald"] { --accent: #34d399; --on-accent: #000000; }
+[data-accent="cyan"] { --accent: #22d3ee; --on-accent: #000000; }
+[data-accent="indigo"] { --accent: #818cf8; --on-accent: #000000; }
+[data-accent="pink"] { --accent: #f472b6; --on-accent: #000000; }
+
+[data-theme="light"][data-accent="mono"], [data-theme="light"] [data-accent="mono"] { --accent: #171717; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="violet"], [data-theme="light"] [data-accent="violet"] { --accent: #7c3aed; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="teal"], [data-theme="light"] [data-accent="teal"] { --accent: #0d9488; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="amber"], [data-theme="light"] [data-accent="amber"] { --accent: #c2690a; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="rose"], [data-theme="light"] [data-accent="rose"] { --accent: #e11d48; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="blue"], [data-theme="light"] [data-accent="blue"] { --accent: #2563eb; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="red"], [data-theme="light"] [data-accent="red"] { --accent: #dc2626; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="orange"], [data-theme="light"] [data-accent="orange"] { --accent: #ea580c; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="emerald"], [data-theme="light"] [data-accent="emerald"] { --accent: #059669; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="cyan"], [data-theme="light"] [data-accent="cyan"] { --accent: #0891b2; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="indigo"], [data-theme="light"] [data-accent="indigo"] { --accent: #4f46e5; --on-accent: #ffffff; }
+[data-theme="light"][data-accent="pink"], [data-theme="light"] [data-accent="pink"] { --accent: #db2777; --on-accent: #ffffff; }
 
 * {
   box-sizing: border-box;

@@ -4,11 +4,33 @@
   import { settings, toggleTab, reorderVisible } from "$lib/settings.svelte";
   import { TABS, SETTINGS_TAB, type Tab, type TabId } from "$lib/tabs";
   import Icon from "./Icon.svelte";
+  import Logo from "./Logo.svelte";
   import { flip } from "svelte/animate";
   import { playing } from "$lib/playing.svelte";
   import { library } from "$lib/library.svelte";
   import { pc, togglePcPanel, loadPcInfo } from "$lib/pcInfo.svelte";
   import { gameStats, watchGameStats } from "$lib/gameStats.svelte";
+  import { account } from "$lib/account.svelte";
+  import { startSignIn, auth } from "$lib/auth.svelte";
+  import { me, refreshProfile, statusText, statusKind } from "$lib/profile.svelte";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { onMount } from "svelte";
+
+  // ---------- Your profile box (bottom) ----------
+  // Loads when you sign in / out; refreshed when you come back to the window (max once a minute).
+  $effect(() => {
+    refreshProfile(account.steamid, true);
+  });
+  onMount(() => {
+    const onFocus = () => refreshProfile(account.steamid);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  });
+  const myProfile = $derived(account.steamid && me.p?.steamid === account.steamid ? me.p : null);
+  function openMyProfile() {
+    openUrl(`steam://openurl/https://steamcommunity.com/profiles/${account.steamid}/`).catch(() => {});
+  }
+  const USER = "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8";
 
   // Live stats: only while the option is on and a game is running (paused when Kosmos is hidden)
   $effect(() => {
@@ -175,7 +197,7 @@
 </script>
 
 <aside class="sidebar">
-  <div class="brand"><span class="dot"></span> Kosmos</div>
+  <div class="brand"><Logo size={26} /><span>Kosmos</span></div>
 
   <nav bind:this={nav} class:dragging={!!dragOrder}>
     {#each shownTabs as tab (tab.id)}
@@ -239,6 +261,8 @@
     </a>
   {/if}
 
+  <!-- Bottom group: My PC and Settings -->
+  <div class="footer">
   <!-- My PC: collapsible, info read once from Windows -->
   <div class="pc">
     <button class="pc-head" onclick={togglePcPanel} aria-expanded={pc.open}>
@@ -262,11 +286,40 @@
     {/if}
   </div>
 
-  <div class="bottom">
-    <a href={SETTINGS_TAB.path} class:active={page.url.pathname === SETTINGS_TAB.path}>
-      <Icon d={SETTINGS_TAB.icon} />
-      {SETTINGS_TAB.label}
-    </a>
+  <a href={SETTINGS_TAB.path} class:active={page.url.pathname === SETTINGS_TAB.path}>
+    <Icon d={SETTINGS_TAB.icon} />
+    {SETTINGS_TAB.label}
+  </a>
+
+  <!-- Your Steam profile: click to open it in Steam -->
+  {#if account.steamid}
+    <button class="me" onclick={openMyProfile} title="Open your Steam profile">
+      <span class="me-pic">
+        {#if myProfile?.avatar}
+          <img src={myProfile.avatar} alt="" width="32" height="32" />
+        {:else}
+          <Icon d={USER} size={16} />
+        {/if}
+        {#if myProfile && myProfile.state != null}
+          <span class="me-dot {statusKind(myProfile)}" aria-hidden="true"></span>
+        {/if}
+      </span>
+      <span class="me-text">
+        <span class="me-name">{myProfile?.name || "Your profile"}</span>
+        {#if myProfile && statusText(myProfile)}
+          <span class="me-status {statusKind(myProfile)}">{statusText(myProfile)}</span>
+        {/if}
+      </span>
+    </button>
+  {:else}
+    <button class="me" onclick={startSignIn} title="Sign in through Steam">
+      <span class="me-pic"><Icon d={USER} size={16} /></span>
+      <span class="me-text">
+        <span class="me-name">{auth.waiting ? "Finish in your browser" : "Sign in"}</span>
+        <span class="me-status">through Steam</span>
+      </span>
+    </button>
+  {/if}
   </div>
   <!-- Drag to resize; double-click to reset. A focusable "separator" is the standard accessible
        window-splitter pattern (arrow keys resize it), so these two warnings don't apply. -->
@@ -296,8 +349,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 18px 12px 12px;
+    gap: 6px;
+    padding: 16px 10px 10px;
     background: var(--surface);
     border-right: 1px solid var(--border);
     height: 100%;
@@ -319,17 +372,12 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 2px 12px 18px;
-    font-weight: 700;
-    font-size: 1.1rem;
-    letter-spacing: 0.02em;
-  }
-  .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    padding: 2px 10px 20px;
+    font-weight: 650;
+    font-size: 1.08rem;
+    letter-spacing: 0.01em;
+    color: var(--text);
+    user-select: none;
   }
   nav {
     display: flex;
@@ -341,9 +389,9 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-    border-radius: var(--radius);
+    gap: 11px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
     color: var(--text-dim);
     text-decoration: none;
     font-size: var(--fs-md);
@@ -358,17 +406,11 @@
     background: var(--surface-2);
     color: var(--text);
   }
-  /* Small accent bar on the left of the active tab */
-  a.active::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 8px;
-    bottom: 8px;
-    width: 3px;
-    border-radius: 2px;
-    background: var(--accent);
-  }
+  /* Icons are a little quieter than the text; the active tab's icon takes the accent color */
+  a :global(svg) { opacity: 0.85; transition: color 0.15s, opacity 0.15s; }
+  a:hover :global(svg) { opacity: 1; }
+  a.active :global(svg) { color: var(--accent); opacity: 1; }
+  .brand :global(svg) { opacity: 1; }
   /* ---------- Drag and hide ---------- */
   nav { user-select: none; }
   nav.dragging, nav.dragging a { cursor: grabbing; }
@@ -390,20 +432,24 @@
   nav.dragging .hide { opacity: 0; }
   .hide:hover { color: var(--text); background: var(--hover); }
   .hidden-link {
-    margin-top: 6px; padding: 4px 12px; font-size: var(--fs-sm); font-weight: 400;
+    margin-top: 6px; padding: 4px 10px; font-size: var(--fs-sm); font-weight: 400;
     color: var(--text-dim);
   }
   .hidden-link:hover { background: none; text-decoration: underline; }
 
   /* ---------- My PC ---------- */
-  .pc { border-top: 1px solid var(--border); padding-top: 8px; }
+  .footer {
+    display: flex; flex-direction: column; gap: 2px;
+    border-top: 1px solid var(--border); padding-top: 8px;
+  }
   .pc-head {
-    width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 12px;
-    background: transparent; border: none; border-radius: var(--radius);
+    width: 100%; display: flex; align-items: center; gap: 11px; padding: 7px 10px;
+    background: transparent; border: none; border-radius: var(--radius-sm);
     color: var(--text-dim); font-size: var(--fs-md); font-weight: 500; text-align: left;
     transition: background 0.15s, color 0.15s;
   }
   .pc-head:hover { background: var(--hover); color: var(--text); }
+  .pc-head :global(svg) { opacity: 0.85; }
   .chev { margin-left: auto; transition: transform 0.15s; }
   .chev.open { transform: rotate(90deg); }
   .pc-body {
@@ -414,6 +460,32 @@
   .pc-body dt { color: var(--text-dim); }
   .pc-body dd { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dim { color: var(--text-dim); margin: 4px 12px; }
+
+  /* ---------- Your profile ---------- */
+  .me {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0;
+    margin-top: 6px; padding: 8px 10px; text-align: left;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .me:hover { border-color: var(--text-dim); }
+  .me-pic {
+    position: relative; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--border); color: var(--text-dim);
+  }
+  .me-pic img { width: 32px; height: 32px; border-radius: 50%; display: block; }
+  /* Status dot on the picture, with a ring in the box color so it stands out */
+  .me-dot {
+    position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%;
+    border: 2px solid var(--surface-2); background: var(--text-dim);
+  }
+  .me-dot.online { background: var(--accent); }
+  .me-dot.game { background: var(--good); }
+  .me-dot.away { background: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .me-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .me-name { font-weight: 600; font-size: var(--fs-md); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .me-status { font-size: 0.75rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .me-status.game { color: var(--good); }
 
   /* ---------- Currently playing ---------- */
   .playing {
@@ -437,8 +509,4 @@
   .stats b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
   .stats-note { margin-top: 4px; font-size: 0.72rem; color: var(--text-dim); white-space: normal; }
 
-  .bottom {
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
-  }
 </style>

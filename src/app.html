@@ -4,17 +4,19 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tauri + SvelteKit + Typescript App</title>
+    <title>Kosmos</title>
     <script>
       // Apply the saved theme before anything is drawn, so there is no flash of the wrong theme.
       try {
         var s = JSON.parse(localStorage.getItem("kosmos-settings-v1") || "{}");
         document.documentElement.dataset.theme = s.theme === "light" ? "light" : "dark";
+        document.documentElement.dataset.accent = s.accent || "mono";
         // Saved sidebar width, so the layout doesn't jump on start
         var w = Number(s.sidebarWidth);
         if (w >= 220 && w <= 568) document.documentElement.style.setProperty("--sidebar-w", w + "px");
       } catch (e) {
         document.documentElement.dataset.theme = "dark";
+        document.documentElement.dataset.accent = "mono";
       }
     </script>
     <!-- Open the connection to our Worker early, so the first request doesn't wait for it -->

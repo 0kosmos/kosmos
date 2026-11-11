@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
+  import SignInCard from "$lib/components/SignInCard.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { account } from "$lib/account.svelte";
   import {
@@ -11,12 +12,20 @@
   let mine = $state<GroupCard[]>([]);
   let mineStatus = $state<"loading" | "ready" | "private" | "error" | "signed-out">("loading");
 
-  onMount(() => {
-    if (!account.steamid) {
+  // Load when you open the tab, and again right after you sign in here
+  $effect(() => {
+    const id = account.steamid;
+    untrack(() => loadMine(id));
+  });
+
+  function loadMine(id: string) {
+    if (!id) {
       mineStatus = "signed-out";
+      mine = [];
       return;
     }
-    fetchMyGroups(account.steamid)
+    mineStatus = "loading";
+    fetchMyGroups(id)
       .then((r) => {
         if (r.private) mineStatus = "private";
         else {
@@ -25,7 +34,7 @@
         }
       })
       .catch(() => (mineStatus = "error"));
-  });
+  }
 
   // ---------- Joinable groups / search ----------
   // Without a search: popular groups (Steam has no "all groups" list, so we use its search for
@@ -122,7 +131,7 @@
       {#if mineStatus === "loading"}
         <p class="dim">Loading your groups...</p>
       {:else if mineStatus === "signed-out"}
-        <p class="dim">Sign in from the Library tab to see your groups.</p>
+        <SignInCard title="Sign in to see your groups" />
       {:else if mineStatus === "private"}
         <p class="dim">Steam only shares your groups when your profile is public (Steam → profile → Edit Profile → Privacy Settings).</p>
       {:else if mineStatus === "error"}

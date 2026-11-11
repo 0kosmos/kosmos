@@ -1247,7 +1247,7 @@ export default {
           "/ISteamUser/GetPlayerSummaries/v2/",
           { steamids: steamid },
           env,
-          300
+          60 // status changes, so keep it only a minute
         );
         const p = data.response?.players?.[0];
         if (!p) return json({ error: "Profile not found" }, 404);
@@ -1257,6 +1257,8 @@ export default {
           avatar: p.avatarfull,
           profileUrl: p.profileurl,
           isPublic: p.communityvisibilitystate === 3,
+          state: Number(p.personastate) || 0, // 0 offline, 1 online, 2 busy, 3 away...
+          game: p.gameextrainfo || "",
         });
       }
 

@@ -1,6 +1,24 @@
 import { TABS, type TabId } from "./tabs";
 
 export type Theme = "dark" | "light";
+export type Accent =
+  | "mono" | "red" | "orange" | "amber" | "emerald" | "teal"
+  | "cyan" | "blue" | "indigo" | "violet" | "pink" | "rose";
+/** Accent colors offered in Settings, in rainbow order (the actual colors are in app.css) */
+export const ACCENTS: { id: Accent; label: string }[] = [
+  { id: "mono", label: "Mono" },
+  { id: "red", label: "Red" },
+  { id: "orange", label: "Orange" },
+  { id: "amber", label: "Amber" },
+  { id: "emerald", label: "Emerald" },
+  { id: "teal", label: "Teal" },
+  { id: "cyan", label: "Cyan" },
+  { id: "blue", label: "Blue" },
+  { id: "indigo", label: "Indigo" },
+  { id: "violet", label: "Violet" },
+  { id: "pink", label: "Pink" },
+  { id: "rose", label: "Rose" },
+];
 export type StorePlatform = "any" | "windows" | "mac" | "linux" | "deck";
 
 interface Settings {
@@ -13,6 +31,7 @@ interface Settings {
   closeToTray: boolean; // X minimizes to the system tray instead of quitting (off by default)
   liveStats: boolean; // live CPU / GPU / RAM of the running game (off by default)
   theme: Theme;
+  accent: Accent; // color of buttons, switches and links
   sidebarWidth: number; // px, dragged with the handle on the sidebar's right edge
 }
 
@@ -27,7 +46,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", sidebarWidth: SIDEBAR_MIN };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -64,6 +83,7 @@ function load(): Settings {
       reduceMotion:
         typeof saved.reduceMotion === "boolean" ? saved.reduceMotion : !!saved.performanceMode,
       theme,
+      accent: ACCENTS.some((a) => a.id === saved.accent) ? saved.accent : "mono",
       sidebarWidth: clampSidebar(Number(saved.sidebarWidth) || SIDEBAR_MIN),
       liveStats: !!saved.liveStats,
       closeToTray: !!saved.closeToTray,
@@ -128,6 +148,10 @@ export function setSidebarWidth(w: number) {
 
 export function setTheme(theme: Theme) {
   settings.theme = theme;
+  save();
+}
+export function setAccent(accent: Accent) {
+  settings.accent = accent;
   save();
 }
 export function setLiveStats(on: boolean) {

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="-2 -2 68 68" fill="#0b0b0c">
+  <path d="M17 13h10v15l14-15h12L35 32l19 19H42L27 36v15H17z" transform="translate(35.5 32) scale(1.08) translate(-35.5 -32)" />
+  
+  <defs>
+    <clipPath id="kosmos-logo-gap"><path d="M-20-20H70.8L26.32 27.68H90V90H-20z" /></clipPath>
+  </defs>
+  <g clip-path="url(#kosmos-logo-gap)">
+    <g transform="rotate(-28 32 32)" fill="#ffffff">
+      <ellipse cx="32" cy="32" rx="29" ry="10" fill="none" stroke="#ffffff" stroke-width="6" />
+      <circle cx="4" cy="29.4" r="4.85" />
+      <circle cx="60" cy="29.4" r="4.85" />
+      <circle cx="46.5" cy="40.7" r="4.85" />
+    </g>
+  </g>
+  <g transform="rotate(-28 32 32)">
+    <ellipse cx="32" cy="32" rx="29" ry="10" fill="none" stroke="#0b0b0c" stroke-width="2.4" />
+    <circle cx="4" cy="29.4" r="3.6" />
+    <circle cx="60" cy="29.4" r="3.6" />
+    <circle cx="46.5" cy="40.7" r="3.6" />
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+<html><body style="margin:0;background:transparent">
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1c20"/><stop offset="0.55" stop-color="#0b0b0c"/><stop offset="1" stop-color="#050506"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="b"/>
+      <feFlood flood-color="#ffffff" flood-opacity="0.3"/><feComposite in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="gapclip" clipPathUnits="userSpaceOnUse"><path d="M-20-20H70.8L26.32 27.68H90V90H-20z" transform="rotate(28 32 32)"/></clipPath>
+  </defs>
+  <rect x="24" y="24" width="976" height="976" rx="220" fill="url(#bg)"/>
+  <rect x="25.5" y="25.5" width="973" height="973" rx="218.5" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="3"/>
+  <g transform="translate(512 512) scale(10.5) translate(-32 -32)">
+    <path d="M17 13h10v15l14-15h12L35 32l19 19H42L27 36v15H17z" transform="translate(35.5 32) scale(1.08) translate(-35.5 -32)" fill="#f2f2f4" filter="url(#glow)"/>
+    <g transform="rotate(-28 32 32)">
+      <g fill="#0b0b0c" stroke="#0b0b0c" clip-path="url(#gapclip)">
+        <ellipse cx="32" cy="32" rx="29" ry="10" fill="none" stroke-width="6.5"/>
+        <circle cx="4" cy="29.4" r="5.2" stroke="none"/><circle cx="60" cy="29.4" r="5.2" stroke="none"/><circle cx="46.5" cy="40.7" r="5.2" stroke="none"/>
+      </g>
+      <g fill="#f2f2f4" filter="url(#glow)">
+        <ellipse cx="32" cy="32" rx="29" ry="10" fill="none" stroke="#f2f2f4" stroke-width="2.8"/>
+        <circle cx="4" cy="29.4" r="3.9"/><circle cx="60" cy="29.4" r="3.9"/><circle cx="46.5" cy="40.7" r="3.9"/>
+      </g>
+    </g>
+  </g>
+</svg></body></html>

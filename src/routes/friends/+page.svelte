@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
+  import SignInCard from "$lib/components/SignInCard.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { account } from "$lib/account.svelte";
   import { fetchFriends, pins, togglePin, chatLink, type Friend } from "$lib/friends.svelte";
@@ -31,8 +32,12 @@
 
   // Load now; refresh when you come back to the window and every minute while this tab is
   // visible (nothing runs when Kosmos is minimized or you're on another tab).
+  // Load when you open the tab, and again right after you sign in here
+  $effect(() => {
+    if (account.steamid) untrack(load);
+  });
+
   onMount(() => {
-    load();
     const onFocus = () => load();
     window.addEventListener("focus", onFocus);
     const timer = setInterval(() => {
@@ -126,7 +131,7 @@
   </div>
 
   {#if !account.steamid}
-    <p class="dim">Sign in from the Library tab to see your friends.</p>
+    <SignInCard title="Sign in to see your friends" />
   {:else if status === "loading"}
     <p class="dim">Loading your friends...</p>
   {:else if status === "private"}

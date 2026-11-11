@@ -37,6 +37,10 @@
   });
 
   $effect(() => {
+    document.documentElement.dataset.accent = settings.accent;
+  });
+
+  $effect(() => {
     document.documentElement.style.setProperty("--sidebar-w", settings.sidebarWidth + "px");
   });
 </script>

@@ -7,6 +7,8 @@
     setLiveStats,
     setCloseToTray,
     setTheme,
+    setAccent,
+    ACCENTS,
     setStoreRegion,
     toggleStoreExclude,
     setStorePlatform,
@@ -145,6 +147,25 @@
         <div class="segmented" role="radiogroup" aria-label="Theme">
           <button role="radio" aria-checked={settings.theme === "dark"} onclick={() => setTheme("dark")}>Black</button>
           <button role="radio" aria-checked={settings.theme === "light"} onclick={() => setTheme("light")}>White</button>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <strong>Accent color</strong>
+          <p class="dim">Color of buttons, switches and links. Mono matches the logo.</p>
+        </div>
+        <div class="swatches" role="radiogroup" aria-label="Accent color">
+          {#each ACCENTS as a (a.id)}
+            <button
+              class="swatch"
+              data-accent={a.id}
+              role="radio"
+              aria-checked={settings.accent === a.id}
+              aria-label={a.label}
+              title={a.label}
+              onclick={() => setAccent(a.id)}
+            ></button>
+          {/each}
         </div>
       </div>
     </div>
@@ -361,7 +382,20 @@
     display: block; width: 18px; height: 18px; border-radius: 50%;
     background: var(--knob); transition: transform 0.15s;
   }
-  .switch[aria-checked="true"] .knob { transform: translateX(18px); }
+  .switch[aria-checked="true"] .knob { transform: translateX(18px); background: var(--on-accent); }
+
+  /* Accent color picker: each swatch shows its own color (data-accent sets --accent on it) */
+  .swatches {
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex-shrink: 0;
+    max-width: 184px; /* two rows of six */
+  }
+  .swatch {
+    width: 24px; height: 24px; border-radius: 50%; padding: 0;
+    background: var(--accent); border: 1px solid var(--border);
+    transition: box-shadow 0.15s;
+  }
+  .swatch:hover { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--border); }
+  .swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
 
   .segmented {
     display: flex; gap: 2px; padding: 2px; flex-shrink: 0;
