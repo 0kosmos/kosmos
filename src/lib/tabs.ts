@@ -1,5 +1,6 @@
 export type TabId =
   | "library"
+  | "downloads"
   | "store"
   | "workshop"
   | "community"
@@ -15,6 +16,7 @@ export interface Tab {
 
 export const TABS: Tab[] = [
   { id: "library", label: "Library", path: "/", icon: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z" },
+  { id: "downloads", label: "Downloads", path: "/downloads", icon: "M12 4v11 M7 10l5 5 5-5 M5 20h14" },
   { id: "store", label: "Store", path: "/store", icon: "M6 7h12l1 13H5L6 7z M9 7a3 3 0 0 1 6 0" },
   { id: "workshop", label: "Workshop", path: "/workshop", icon: "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z M12 12l8-4.5 M12 12v9 M12 12L4 7.5" },
   { id: "community", label: "Community", path: "/community", icon: "M4 5h16v11H9l-5 4V5z" },

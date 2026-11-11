@@ -5,41 +5,30 @@
   import { library } from "$lib/library.svelte";
   import { fetchGameInfo, fetchReviews, type GameInfo, type Review } from "$lib/gameInfo";
   import NewsRow from "$lib/components/NewsRow.svelte";
-  import { invoke } from "@tauri-apps/api/core";
   import { playing } from "$lib/playing.svelte";
   import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
+  import { refreshInstalled, stateOf } from "$lib/installed.svelte";
 
-  // ---------- Installed / updating state (read from Steam's registry entry) ----------
-  type AppState = { installed: boolean; updating: boolean; running: boolean };
-  let appState = $state<AppState | null>(null);
-
-  async function refreshAppState() {
-    const id = appid;
-    if (!id) return;
-    try {
-      const s = await invoke<AppState>("steam_app_state", { appid: id });
-      if (id === appid) appState = s;
-    } catch {
-      appState = null; // unknown: we just show Play
-    }
-  }
-
-  // Check when the game opens, when you come back to the window (e.g. after installing
-  // in Steam), and when a game starts or stops. No polling.
+  // ---------- Installed / installing / updating (same info the library tiles use) ----------
+  // Re-read when the page opens, when you come back to the window, and when a game starts
+  // or stops. While something downloads it re-checks by itself (see installed.svelte.ts).
   $effect(() => {
     appid;
-    appState = null; // new game: forget the old one's state
-    refreshAppState();
-    const onFocus = () => refreshAppState();
+    playing.appid;
+    refreshInstalled();
+  });
+  $effect(() => {
+    const onFocus = () => refreshInstalled();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   });
 
-  // A game started or stopped: re-read (e.g. an update may have finished), without clearing first
-  $effect(() => {
-    playing.appid;
-    refreshAppState();
-  });
+  const PENDING_LABEL: Record<string, string> = {
+    installing: "Installing...",
+    updating: "Updating...",
+    "install-paused": "Install paused",
+    "update-paused": "Update paused",
+  };
 
   async function steamLink(link: string) {
     playError = "";
@@ -52,6 +41,7 @@
 
   const appid = $derived(Number(page.url.searchParams.get("id")));
   const mine = $derived(library.games.find((g) => g.appid === appid));
+  const installState = $derived(stateOf(appid));
 
   // "Running" follows the live signal the sidebar uses, so it disappears as soon as the game closes
   const isRunning = $derived(!!appid && playing.appid === appid);
@@ -240,8 +230,14 @@
           <p class="dim">This game has no Steam store page (it may have been removed).</p>
         {/if}
         <div class="actions">
-          {#if appState && !appState.installed}
+          {#if installState === "not-installed"}
             <button class="play" onclick={() => steamLink(`steam://install/${appid}`)}>⬇ Install</button>
+          {:else if PENDING_LABEL[installState]}
+            <button
+              class="play pending"
+              onclick={() => steamLink("steam://nav/downloads")}
+              title="Open Steam's downloads"
+            >{PENDING_LABEL[installState]}</button>
           {:else}
             <button
               class="play"
@@ -251,7 +247,7 @@
             >▶ Play</button>
           {/if}
 
-          {#if appState?.installed}
+          {#if installState === "ready"}
             <button
               class="secondary"
               onclick={() => steamLink("steam://nav/downloads")}
@@ -269,6 +265,16 @@
             Store page ↗
           </button>
 
+          {#if installState === "ready"}
+            <button
+              class="secondary danger"
+              onclick={() => steamLink(`steam://uninstall/${appid}`)}
+              title="Steam will ask you to confirm"
+            >
+              Uninstall
+            </button>
+          {/if}
+
           {#if mine}
             <button
               class="secondary"
@@ -279,9 +285,6 @@
             </button>
           {/if}
 
-          {#if appState?.updating}
-            <span class="badge">Steam is updating this game</span>
-          {/if}
           {#if mine}<span class="dim">{mine.hours} h played</span>{/if}
           {#if playError}<span class="err">{playError}</span>{/if}
         </div>
@@ -502,6 +505,12 @@
   }
   .play { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
   .play:hover { filter: brightness(1.1); }
+  .secondary.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .play.pending {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--text); border-color: transparent;
+  }
+  .play.pending:hover { filter: none; border-color: var(--accent); }
   .secondary {
     background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
     transition: border-color 0.15s;

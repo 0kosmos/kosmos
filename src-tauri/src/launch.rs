@@ -28,7 +28,7 @@ pub struct LaunchMeasured {
 // ---------- Steam's install files ----------
 
 /// Reads `"key"   "value"` lines from Steam's text files (libraryfolders.vdf, appmanifest_*.acf).
-fn vdf_values(text: &str, key: &str) -> Vec<String> {
+pub(crate) fn vdf_values(text: &str, key: &str) -> Vec<String> {
     let needle = format!("\"{key}\"");
     text.lines()
         .filter_map(|line| {
@@ -45,7 +45,7 @@ fn vdf_values(text: &str, key: &str) -> Vec<String> {
 
 /// All Steam library folders (the main Steam folder plus extra drives).
 #[cfg(windows)]
-fn steam_libraries() -> Vec<PathBuf> {
+pub(crate) fn steam_libraries() -> Vec<PathBuf> {
     let Ok(steam) = windows_registry::CURRENT_USER
         .open(r"Software\Valve\Steam")
         .and_then(|k| k.get_string("SteamPath"))
@@ -66,7 +66,7 @@ fn steam_libraries() -> Vec<PathBuf> {
 }
 
 #[cfg(not(windows))]
-fn steam_libraries() -> Vec<PathBuf> {
+pub(crate) fn steam_libraries() -> Vec<PathBuf> {
     Vec::new()
 }
 

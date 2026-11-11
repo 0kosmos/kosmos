@@ -3,20 +3,32 @@
   import { untrack } from "svelte";
   import { cachedCover, findCover } from "$lib/covers";
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import { installed } from "$lib/installed.svelte";
+  import { stateOf } from "$lib/installed.svelte";
   import { playing } from "$lib/playing.svelte";
   import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
 
   let { game }: { game: Game } = $props();
 
-  // Quick Play / Install button under the tile (Steam does the actual work)
-  const isInstalled = $derived(!installed.known || installed.ids.has(game.appid));
+  // Quick button under the tile (Steam does the actual work)
+  const inst = $derived(stateOf(game.appid));
   const isRunning = $derived(playing.appid === game.appid);
+  const canPlay = $derived(inst === "ready" || inst === "unknown");
+
+  const LABEL: Record<string, string> = {
+    ready: "▶ Play",
+    unknown: "▶ Play",
+    "not-installed": "⬇ Install",
+    installing: "Installing...",
+    updating: "Updating...",
+    "install-paused": "Install paused",
+    "update-paused": "Update paused",
+  };
 
   function quickAction() {
     hideLaunchTip();
-    if (isInstalled) playAndTime(game.appid).catch(() => {});
-    else openUrl(`steam://install/${game.appid}`).catch(() => {});
+    if (canPlay) playAndTime(game.appid).catch(() => {});
+    else if (inst === "not-installed") openUrl(`steam://install/${game.appid}`).catch(() => {});
+    else openUrl("steam://nav/downloads").catch(() => {}); // installing / updating / paused: show Steam's queue
   }
 
   const CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps";
@@ -81,13 +93,15 @@
   {:else}
     <button
       class="quick"
-      class:install={!isInstalled}
+      class:install={inst === "not-installed"}
+      class:pending={!canPlay && inst !== "not-installed"}
       onclick={quickAction}
-      onpointerenter={(e) => isInstalled && showLaunchTip(game.appid, e.currentTarget)}
+      onpointerenter={(e) => canPlay && showLaunchTip(game.appid, e.currentTarget)}
       onpointerleave={hideLaunchTip}
-      aria-label={(isInstalled ? "Play " : "Install ") + game.name}
+      title={!canPlay && inst !== "not-installed" ? "Open Steam's downloads" : undefined}
+      aria-label={LABEL[inst] + ": " + game.name}
     >
-      {isInstalled ? "▶ Play" : "⬇ Install"}
+      {LABEL[inst]}
     </button>
   {/if}
 </div>
@@ -131,6 +145,12 @@
   button.quick:hover { filter: brightness(1.1); }
   .quick.install { background: var(--surface-2); color: var(--text); border-color: var(--border); }
   button.quick.install:hover { filter: none; border-color: var(--text-dim); }
+  /* Installing / updating / paused */
+  .quick.pending {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--text); border-color: transparent; font-weight: 600;
+  }
+  button.quick.pending:hover { filter: none; border-color: var(--accent); }
   .quick.running {
     background: color-mix(in srgb, var(--good) 18%, transparent);
     border-color: transparent; color: var(--text);

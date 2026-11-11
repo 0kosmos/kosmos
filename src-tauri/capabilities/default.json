@@ -12,6 +12,7 @@
       "allow": [
         { "url": "steam://run/*" },
         { "url": "steam://install/*" },
+        { "url": "steam://uninstall/*" },
         { "url": "steam://nav/downloads" },
         { "url": "steam://openurl/https://store.steampowered.com/recommended/recommendgame/*" },
         { "url": "steam://openurl/https://store.steampowered.com/app/*" }
