@@ -69,6 +69,228 @@ async function getReviews(appid) {
   return raw.response || raw;
 }
 
+// PC specs a reviewer chose to share on Steam (null if they didn't)
+function cleanHardware(h) {
+  if (!h || typeof h !== "object") return null;
+  const ramMb = Number(h.system_ram) || 0;
+  const vramMb = Number(h.vram_size) || 0;
+  const out = {
+    os: String(h.os || "").slice(0, 80),
+    cpu: String(h.cpu_name || "").replace(/\(R\)|\(TM\)/gi, "").replace(/\s+/g, " ").trim().slice(0, 100),
+    gpu: String(h.adapter_description || "").slice(0, 100),
+    ram: ramMb ? Math.round(ramMb / 1024) + " GB" : "",
+    vram: vramMb ? Math.round(vramMb / 1024) + " GB" : "",
+  };
+  return out.os || out.cpu || out.gpu || out.ram ? out : null;
+}
+
+// ---------- Game news / patch notes ----------
+// Steam writes announcements in "BBCode" ([p], [b], [img], [list] ...).
+// We turn that into a simple list of blocks the app can show as plain text,
+// so no outside HTML ever gets into the app.
+//   { t: "h", text } heading      { t: "p", text } paragraph   { t: "li", text } list item
+//   { t: "img", src }  image       { t: "yt", id }  YouTube video  { t: "hr" } divider
+const CLAN_IMAGES = "https://clan.akamai.steamstatic.com/images/";
+
+function decodeEntities(s) {
+  return s
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+    .replace(/\\([[\]])/g, "$1"); // Steam writes a literal "[" as "\["
+}
+
+function bbcodeToBlocks(src) {
+  const text = String(src || "").replace(/\{STEAM_CLAN_IMAGE\}\/?/g, CLAN_IMAGES).slice(0, 60000);
+  const blocks = [];
+  let buf = "";
+  let kind = "p";
+  let bold = 0;
+  let plainChars = 0; // non-bold characters in the current paragraph
+  let imgUrlMode = false; // inside [img]url[/img]
+
+  const flush = () => {
+    const t = decodeEntities(buf).replace(/\s+/g, " ").trim();
+    if (t) {
+      let k = kind;
+      // A short paragraph that is entirely bold is a heading
+      if (k === "p" && plainChars === 0 && t.length < 120) k = "h";
+      blocks.push({ t: k, text: t.slice(0, 4000) });
+    }
+    buf = "";
+    plainChars = 0;
+  };
+  const addText = (s) => {
+    if (imgUrlMode) {
+      const u = s.trim();
+      if (/^https:\/\//.test(u)) blocks.push({ t: "img", src: u });
+      return;
+    }
+    const parts = s.split("\n");
+    parts.forEach((part, i) => {
+      if (i > 0) flush();
+      buf += part;
+      if (bold === 0) plainChars += part.replace(/\s/g, "").length;
+    });
+  };
+
+  const re = /\[(\/?)([a-z0-9*]+)(?:([= ])([^\]]*))?\]/gi;
+  let last = 0;
+  let m;
+  while ((m = re.exec(text)) && blocks.length < 400) {
+    addText(text.slice(last, m.index));
+    last = re.lastIndex;
+    const closing = m[1] === "/";
+    const tag = m[2].toLowerCase();
+    const attr = (m[4] || "").trim();
+
+    switch (tag) {
+      case "h1": case "h2": case "h3": case "h4":
+        flush();
+        kind = closing ? "p" : "h";
+        break;
+      case "p": case "quote": case "code": case "tr": case "table":
+        flush();
+        break;
+      case "td": case "th":
+        if (closing) buf += "  ·  ";
+        break;
+      case "list": case "olist":
+        flush();
+        kind = "p";
+        break;
+      case "*":
+        flush();
+        kind = closing ? "p" : "li";
+        break;
+      case "b": case "strong":
+        bold = Math.max(0, bold + (closing ? -1 : 1));
+        break;
+      case "hr":
+        if (!closing) { flush(); blocks.push({ t: "hr" }); }
+        break;
+      case "img": {
+        if (closing) { imgUrlMode = false; break; }
+        flush();
+        const s = /src="([^"]+)"/.exec(attr) || (m[3] === "=" ? [null, attr] : null);
+        if (s && /^https:\/\//.test(s[1])) blocks.push({ t: "img", src: s[1] });
+        else imgUrlMode = true;
+        break;
+      }
+      case "previewyoutube": {
+        if (closing) break;
+        flush();
+        const id = (attr.split(";")[0] || "").trim();
+        if (/^[A-Za-z0-9_-]{6,20}$/.test(id)) blocks.push({ t: "yt", id });
+        break;
+      }
+      default:
+        // inline tags like [i], [u], [url=...], [spoiler]: keep only their text
+        break;
+    }
+  }
+  addText(text.slice(last));
+  flush();
+
+  // Drop dividers at the very start or end
+  while (blocks.length && blocks[0].t === "hr") blocks.shift();
+  while (blocks.length && blocks[blocks.length - 1].t === "hr") blocks.pop();
+  return blocks;
+}
+
+async function getNews(appid) {
+  const u = new URL("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/");
+  u.searchParams.set("appid", appid);
+  u.searchParams.set("count", "12");
+  u.searchParams.set("maxlength", "0");
+  u.searchParams.set("feeds", "steam_community_announcements");
+  const res = await fetch(u.toString(), { cf: { cacheTtl: 3600, cacheEverything: true } });
+  if (!res.ok) throw new Error("News answered " + res.status);
+  const raw = await res.json();
+  const items = (raw.appnews && raw.appnews.newsitems) || [];
+
+  return items.map((n) => {
+    const blocks = bbcodeToBlocks(n.contents);
+    const firstImg = blocks.find((b) => b.t === "img");
+    const preview = blocks
+      .filter((b) => b.t === "p" || b.t === "li")
+      .map((b) => b.text)
+      .join(" ")
+      .slice(0, 200);
+    return {
+      id: String(n.gid),
+      title: String(n.title || "").slice(0, 200),
+      date: (n.date || 0) * 1000,
+      url: /^https:\/\//.test(n.url || "") ? n.url : "",
+      image: firstImg ? firstImg.src : "",
+      preview,
+      blocks,
+    };
+  });
+}
+
+// Reviews with the reviewer's name and avatar, 10 at a time.
+// cursor "*" = first page; Steam gives us the cursor for the next page.
+// Names and avatars for all 10 reviewers are fetched in ONE request.
+async function getReviewPage(appid, cursor, env) {
+  const u = new URL("https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/");
+  u.searchParams.set(
+    "input_json",
+    JSON.stringify({
+      appid: Number(appid),
+      filter: 0, // most helpful
+      day_range: 365,
+      num_per_page: 10,
+      languages: ["english"],
+      purchase_type: 1, // all reviews
+      cursor,
+    })
+  );
+  const res = await fetch(u.toString(), { cf: { cacheTtl: 3600, cacheEverything: true } });
+  if (!res.ok) throw new Error("Reviews answered " + res.status);
+  const raw = await res.json();
+  const r = raw.response || raw;
+  const reviews = r.reviews || [];
+
+  // Look up reviewer names and avatars (up to 100 per request; we only need 10)
+  const ids = [...new Set(reviews.map((x) => x.author && x.author.steamid).filter(Boolean))];
+  const players = {};
+  if (ids.length) {
+    try {
+      const data = await steam(
+        "/ISteamUser/GetPlayerSummaries/v2/",
+        { steamids: ids.join(",") },
+        env,
+        86400 // names and avatars rarely change: remember for a day
+      );
+      for (const p of (data.response && data.response.players) || []) players[p.steamid] = p;
+    } catch {
+      /* no names/avatars this time; the reviews still show */
+    }
+  }
+
+  const list = reviews.map((x) => {
+    const sid = (x.author && x.author.steamid) || "";
+    const p = players[sid];
+    return {
+      id: x.recommendationid,
+      steamid: sid,
+      name: p ? p.personaname : "",
+      avatar: p ? p.avatarmedium : "",
+      text: String(x.review || "").slice(0, 1500),
+      positive: !!x.voted_up,
+      helpful: x.votes_up || 0,
+      hours: Math.round(((x.author && x.author.playtime_forever) || 0) / 60),
+      date: (x.timestamp_created || 0) * 1000,
+      deck: !!x.primarily_steam_deck,
+      hardware: cleanHardware(x.hardware),
+    };
+  });
+
+  // No more pages when Steam sends nothing new
+  const next = reviews.length && r.cursor && r.cursor !== cursor ? r.cursor : null;
+  return { list, cursor: next };
+}
+
 // Cover images: Steam's store API knows the real ("coded") image addresses,
 // which newer games need. One request handles up to 50 games. No key needed.
 const ASSET_BASE = "https://shared.cloudflare.steamstatic.com/store_item_assets/";
@@ -249,6 +471,23 @@ export default {
           .slice(0, 50);
         if (!ids.length) return json({ error: "Please add ?appids=1,2,3" }, 400);
         return json({ covers: await getCovers(ids) }, 200, 86400);
+      }
+
+      // ---------- Reviews with reviewer names/avatars, 10 per page ----------
+      if (url.pathname === "/reviews") {
+        const appid = url.searchParams.get("appid") || "";
+        const cursor = url.searchParams.get("cursor") || "*";
+        if (!/^\d{1,9}$/.test(appid) || !/^[A-Za-z0-9+/=*]{1,120}$/.test(cursor)) {
+          return json({ error: "Please add ?appid=<number>&cursor=<cursor>" }, 400);
+        }
+        return json(await getReviewPage(appid, cursor, env), 200, 3600);
+      }
+
+      // ---------- Latest updates / news for a game ----------
+      if (url.pathname === "/news") {
+        const appid = url.searchParams.get("appid") || "";
+        if (!/^\d{1,9}$/.test(appid)) return json({ error: "Please add ?appid=<number>" }, 400);
+        return json({ items: await getNews(appid) }, 200, 3600);
       }
 
       // ---------- Game page data (no Steam ID needed) ----------

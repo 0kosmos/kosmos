@@ -21,6 +21,77 @@ export interface GameInfo {
   };
 }
 
+export interface Review {
+  id: string;
+  steamid: string;
+  name: string; // empty if Steam didn't send it
+  avatar: string; // empty if Steam didn't send it
+  text: string;
+  positive: boolean;
+  helpful: number;
+  hours: number;
+  date: number; // ms
+  deck?: boolean; // played mostly on Steam Deck
+  /** PC specs the reviewer chose to share on Steam (null if not shared) */
+  hardware?: { os: string; cpu: string; gpu: string; ram: string; vram: string } | null;
+}
+
+// ---------- News / patch notes ----------
+export type NewsBlock =
+  | { t: "h" | "p" | "li"; text: string }
+  | { t: "img"; src: string }
+  | { t: "yt"; id: string }
+  | { t: "hr" };
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  date: number; // ms
+  url: string;
+  image: string;
+  preview: string;
+  blocks: NewsBlock[];
+}
+
+const newsMemory = new Map<number, NewsItem[]>();
+
+export async function fetchNews(appid: number): Promise<NewsItem[]> {
+  const hit = newsMemory.get(appid);
+  if (hit) return hit;
+  const res = await fetch(`${API_BASE}/news?appid=${appid}`);
+  if (!res.ok) throw new Error("Request failed");
+  const items = ((await res.json()).items ?? []) as NewsItem[];
+  if (newsMemory.size > 15) newsMemory.delete(newsMemory.keys().next().value!);
+  newsMemory.set(appid, items);
+  return items;
+}
+
+export interface ReviewPage {
+  list: Review[];
+  cursor: string | null; // null = no more reviews
+}
+
+// First page of reviews per game, kept in memory so reopening a game is instant
+const firstPages = new Map<number, ReviewPage>();
+
+/** cursor "*" = first page. */
+export async function fetchReviews(appid: number, cursor = "*"): Promise<ReviewPage> {
+  if (cursor === "*") {
+    const hit = firstPages.get(appid);
+    if (hit) return hit;
+  }
+  const res = await fetch(
+    `${API_BASE}/reviews?appid=${appid}&cursor=${encodeURIComponent(cursor)}`
+  );
+  if (!res.ok) throw new Error("Request failed");
+  const page = (await res.json()) as ReviewPage;
+  if (cursor === "*") {
+    if (firstPages.size > 30) firstPages.delete(firstPages.keys().next().value!);
+    firstPages.set(appid, page);
+  }
+  return page;
+}
+
 // Small in-memory copy so reopening a game is instant
 const memory = new Map<number, GameInfo>();
 

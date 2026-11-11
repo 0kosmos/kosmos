@@ -3,7 +3,8 @@
   import { goto } from "$app/navigation";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { library } from "$lib/library.svelte";
-  import { fetchGameInfo, type GameInfo } from "$lib/gameInfo";
+  import { fetchGameInfo, fetchReviews, type GameInfo, type Review } from "$lib/gameInfo";
+  import NewsRow from "$lib/components/NewsRow.svelte";
 
   const appid = $derived(Number(page.url.searchParams.get("id")));
   const mine = $derived(library.games.find((g) => g.appid === appid));
@@ -38,6 +39,68 @@
       cancelled = true;
     };
   });
+
+  // ---------- Reviews (10 at a time, with reviewer name and avatar) ----------
+  let reviews = $state<Review[]>([]);
+  let cursor = $state<string | null>(null);
+  let revStatus = $state<"loading" | "ready" | "error">("loading");
+  let loadingMore = $state(false);
+
+  $effect(() => {
+    const id = appid;
+    reviews = [];
+    cursor = null;
+    revStatus = "loading";
+    if (!id) return;
+    let cancelled = false;
+    fetchReviews(id)
+      .then((p) => {
+        if (cancelled) return;
+        reviews = p.list;
+        cursor = p.cursor;
+        revStatus = "ready";
+      })
+      .catch(() => {
+        if (!cancelled) revStatus = "error";
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
+
+  async function showMore() {
+    if (!cursor || loadingMore) return;
+    const id = appid;
+    loadingMore = true;
+    try {
+      const p = await fetchReviews(id, cursor);
+      if (id !== appid) return; // user opened another game meanwhile
+      const seen = new Set(reviews.map((r) => r.id));
+      reviews = [...reviews, ...p.list.filter((r) => !seen.has(r.id))];
+      cursor = p.cursor;
+    } catch {
+      /* keep the button so they can try again */
+    } finally {
+      loadingMore = false;
+    }
+  }
+
+  // If the new reviews request fails, fall back to the few reviews that came with the game page
+  const shownReviews = $derived<Review[]>(
+    revStatus === "error"
+      ? (info?.reviews?.list ?? []).map((r, i) => ({
+          ...r, id: String(i), steamid: "", name: "", avatar: "", date: 0,
+        }))
+      : reviews
+  );
+
+  function openProfile(steamid: string) {
+    if (/^\d{17}$/.test(steamid)) openUrl(`https://steamcommunity.com/profiles/${steamid}/`).catch(() => {});
+  }
+
+  function fmtDate(ms: number) {
+    return ms ? new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "";
+  }
 
   const title = $derived(info?.name ?? mine?.name ?? "Game");
   const shots = $derived(info?.screenshots ?? []);
@@ -146,6 +209,11 @@
             </section>
           {/if}
 
+          <section>
+            <h2>Latest updates</h2>
+            <NewsRow {appid} fallbackImage={info.header} />
+          </section>
+
           {#if info.reviews && info.reviews.total > 0}
             <section>
               <h2>Reviews</h2>
@@ -155,19 +223,62 @@
                   · {pct}% positive · {info.reviews.total.toLocaleString()} reviews
                 </span>
               </p>
+              {#if revStatus === "loading"}
+                <p class="dim">Loading reviews...</p>
+              {/if}
               <div class="reviews">
-                {#each info.reviews.list as r}
+                {#each shownReviews as r (r.id)}
                   <article class="review">
-                    <div class="rhead">
-                      <strong class:good={r.positive} class:bad={!r.positive}>
-                        {r.positive ? "Recommended" : "Not recommended"}
-                      </strong>
-                      <span class="dim">{r.hours} h on record</span>
+                    <div class="author">
+                      {#if r.avatar}
+                        <img class="avatar" src={r.avatar} alt="" loading="lazy" decoding="async" />
+                      {:else}
+                        <span class="avatar blank" aria-hidden="true"></span>
+                      {/if}
+                      <div class="who">
+                        <span class="name">{r.name || "Steam user"}</span>
+                        <span class="dim small">
+                          {r.hours} h on record{r.date ? " · " + fmtDate(r.date) : ""}
+                        </span>
+                      </div>
+                      {#if r.steamid}
+                        <button
+                          class="profile"
+                          onclick={() => openProfile(r.steamid)}
+                          title="Open Steam profile"
+                          aria-label={"Open " + (r.name || "reviewer") + "'s Steam profile"}
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                            <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"
+                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </button>
+                      {/if}
+                    </div>
+                    <div class="verdict" class:good={r.positive} class:bad={!r.positive}>
+                      {r.positive ? "👍 Recommended" : "👎 Not recommended"}
+                      {#if r.helpful}<span class="dim small"> · {r.helpful.toLocaleString()} found this helpful</span>{/if}
                     </div>
                     <p class="text clamp">{r.text}</p>
+                    {#if r.hardware}
+                      <!-- PC specs the reviewer chose to share on Steam -->
+                      <dl class="specs">
+                        {#if r.hardware.os}<dt>OS</dt><dd>{r.hardware.os}</dd>{/if}
+                        {#if r.hardware.cpu}<dt>CPU</dt><dd>{r.hardware.cpu}</dd>{/if}
+                        {#if r.hardware.gpu}<dt>GPU</dt><dd>{r.hardware.gpu}{r.hardware.vram ? ` (${r.hardware.vram})` : ""}</dd>{/if}
+                        {#if r.hardware.ram}<dt>RAM</dt><dd>{r.hardware.ram}</dd>{/if}
+                      </dl>
+                    {:else if r.deck}
+                      <p class="dim small deck">Played on Steam Deck</p>
+                    {/if}
                   </article>
                 {/each}
               </div>
+              {#if revStatus === "ready" && cursor}
+                <button class="more" onclick={showMore} disabled={loadingMore}>
+                  {loadingMore ? "Loading..." : "Show more reviews"}
+                </button>
+              {/if}
             </section>
           {/if}
         </div>
@@ -298,7 +409,31 @@
   .summary { margin: 0 0 12px; }
   .reviews { display: flex; flex-direction: column; gap: 10px; }
   .review { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
-  .rhead { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
+  .author { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: block; background: var(--surface-2); }
+  .who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .name { font-weight: 600; font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .small { font-size: var(--fs-sm); }
+  .profile {
+    flex-shrink: 0; width: 30px; height: 30px; display: grid; place-items: center;
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-dim); transition: color 0.15s, border-color 0.15s;
+  }
+  .profile:hover { color: var(--text); border-color: var(--text-dim); }
+  .specs {
+    margin-top: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius-sm);
+    grid-template-columns: auto 1fr; gap: 3px 12px;
+  }
+  .deck { margin-top: 8px; }
+  .verdict { font-weight: 600; font-size: var(--fs-md); margin-bottom: 6px; }
+  .verdict .dim { font-weight: 400; }
+  .more {
+    margin-top: 12px; width: 100%; padding: 10px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text-dim); transition: color 0.15s, border-color 0.15s;
+  }
+  .more:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
+  .more:disabled { opacity: 0.6; cursor: default; }
   .good { color: var(--good); }
   .bad { color: var(--bad); }
   .clamp { display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
