@@ -8,7 +8,9 @@ The developer is a beginner: explain changes simply and say which file each chan
 - Steam data comes through a Cloudflare Worker proxy (API_BASE in src/lib/config.ts).
   The Steam API key lives only in the Worker as a secret. Never put a key in this project.
 - Games launch through the real Steam client with steam://run/<appid> (opener plugin).
-- Login is currently a temporary SteamID64 box; Steam OpenID sign-in comes later.
+- Login is Steam OpenID: app opens Worker /auth/login?state=<one-time code> in the browser, Worker verifies
+  with Steam (check_authentication) and returns via kosmos://auth?steamid&state (deep-link + single-instance
+  plugins). The app only accepts a link whose state matches its own pending code. Worker code is in worker/worker.js.
 
 ## Rules
 - Performance is the top priority: low idle RAM, near-0% idle CPU, small install, fast on low-end PCs.

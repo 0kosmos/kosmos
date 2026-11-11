@@ -2,12 +2,10 @@
   import { onMount } from "svelte";
   import GameTile from "$lib/components/GameTile.svelte";
   import VirtualGrid from "$lib/components/VirtualGrid.svelte";
-  import { account, setSteamId } from "$lib/account.svelte";
-  import { library, loadLibrary, disconnect } from "$lib/library.svelte";
+  import { account } from "$lib/account.svelte";
+  import { library, loadLibrary } from "$lib/library.svelte";
   import { view, saveView } from "$lib/libraryView.svelte";
-
-  let input = $state("");
-  let inputError = $state("");
+  import { auth, startSignIn, cancelSignIn, signOut } from "$lib/auth.svelte";
 
   const games = $derived.by(() => {
     const q = view.query.trim().toLowerCase();
@@ -47,30 +45,30 @@
     const fresh = library.status === "ready" && Date.now() - library.updatedAt < 5 * 60 * 1000;
     if (!fresh) loadLibrary();
   });
-
-  function connect() {
-    if (!/^7656\d{13}$/.test(input.trim())) {
-      inputError = "That doesn't look right. It should be 17 digits starting with 7656.";
-      return;
-    }
-    inputError = "";
-    setSteamId(input);
-    loadLibrary();
-  }
 </script>
 
 <div class="page">
   {#if !account.steamid}
     <div class="card">
-      <h1>Connect your Steam account</h1>
-      <p class="dim">
-        Temporary step: paste your SteamID64. "Sign in through Steam" comes soon.
-      </p>
-      <div class="row">
-        <input type="text" placeholder="7656119..." bind:value={input} onkeydown={(e) => e.key === "Enter" && connect()} />
-        <button class="primary" onclick={connect}>Connect</button>
-      </div>
-      {#if inputError}<p class="err">{inputError}</p>{/if}
+      {#if auth.waiting}
+        <h1>Finish signing in in your browser</h1>
+        <p class="dim">
+          Steam's login page is open in your browser. When you're done there, Kosmos will continue
+          on its own.
+        </p>
+        <div class="row">
+          <button class="primary" onclick={startSignIn}>Open the login page again</button>
+          <button class="ghost" onclick={cancelSignIn}>Cancel</button>
+        </div>
+      {:else}
+        <h1>Sign in to see your games</h1>
+        <p class="dim">
+          You'll sign in on Steam's own website in your browser. Kosmos never sees or stores your
+          password.
+        </p>
+        <button class="primary" onclick={startSignIn}>Sign in through Steam</button>
+      {/if}
+      {#if auth.error}<p class="err">{auth.error}</p>{/if}
     </div>
   {:else}
     <h1>Library <span class="count">{games.length} games</span></h1>
@@ -92,19 +90,23 @@
         <option value="unplayed">Never played</option>
       </select>
 
-      <button class="ghost" onclick={disconnect}>Disconnect</button>
+      <button class="ghost signout" onclick={signOut}>Sign out</button>
     </div>
 
     {#if library.status === "loading"}
       <p class="dim">Loading your games...</p>
     {:else if library.status === "private"}
       <div class="card">
-        <h2>Your game list is private</h2>
+        <h2>You're signed in, but your game list is private</h2>
         <p class="dim">
-          Steam only shares your games if "Game details" is public. In Steam, open your profile →
-          Edit Profile → Privacy Settings, set Game details to Public, then come back here.
+          Steam only shares your games with apps like Kosmos when "Game details" is public. In
+          Steam, open your profile → Edit Profile → Privacy Settings, set Game details to Public,
+          then press Try again. It can take a few minutes for Steam to update.
         </p>
-        <button class="primary" onclick={loadLibrary}>Try again</button>
+        <div class="row">
+          <button class="primary" onclick={loadLibrary}>Try again</button>
+          <button class="ghost" onclick={signOut}>Sign out</button>
+        </div>
       </div>
     {:else if library.status === "error"}
       <div class="card">
@@ -148,8 +150,7 @@
     border-radius: var(--radius);
   }
   .card p { margin: 0 0 16px; }
-  .row { display: flex; gap: 10px; }
-  .row input { flex: 1; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
   button.primary {
     background: var(--accent);
     color: var(--on-accent);
@@ -160,8 +161,8 @@
     transition: filter 0.15s;
   }
   button.primary:hover { filter: brightness(1.1); }
+  button.signout { margin-left: auto; }
   button.ghost {
-    margin-left: auto;
     background: transparent;
     border: 1px solid var(--border);
     border-radius: var(--radius);
