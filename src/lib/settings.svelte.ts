@@ -82,6 +82,22 @@ export function moveTab(id: TabId, direction: -1 | 1) {
   save();
 }
 
+/**
+ * New order for the tabs shown in the sidebar (after a drag).
+ * Hidden tabs keep their place in the full order; only the visible ones are rearranged.
+ */
+export function reorderVisible(newVisible: TabId[]) {
+  const slots: number[] = [];
+  settings.order.forEach((id, i) => {
+    if (newVisible.includes(id)) slots.push(i);
+  });
+  if (slots.length !== newVisible.length) return; // something changed meanwhile; ignore
+  const next = [...settings.order];
+  slots.forEach((slot, k) => (next[slot] = newVisible[k]));
+  settings.order = next;
+  save();
+}
+
 export function setReduceMotion(on: boolean) {
   settings.reduceMotion = on;
   save();
