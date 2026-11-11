@@ -53,6 +53,18 @@ async function get<T>(rawPath: string, showMature = false): Promise<T> {
   return data;
 }
 
+/** A free game on the Epic Games Store (this week's, or next week's) */
+export interface EpicFreeGame {
+  title: string;
+  slug: string; // store page name, opened in the Epic launcher
+  image: string;
+  now: boolean; // free right now (otherwise: free soon)
+  start: number; // ms
+  end: number; // ms
+  originalPrice: string; // normal price, "" if the game is always free
+}
+export const fetchEpicFree = () => get<{ items: EpicFreeGame[] }>("/store/epic-free").then((d) => d.items);
+
 export const fetchDeals = () => get<{ items: StoreGame[] }>("/store/deals").then((d) => d.items);
 
 /** What your content settings hid from a search, per reason (1-5 = Steam content descriptors) */

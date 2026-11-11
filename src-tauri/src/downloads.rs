@@ -97,6 +97,50 @@ pub fn steam_installs() -> Vec<InstalledGame> {
     out
 }
 
+/// The real size of installed games' folders, as [appid, bytes] pairs.
+/// Steam's own number (SizeOnDisk) only counts what Steam downloaded itself; games that fetch
+/// most of their data through their own launcher (e.g. Wuthering Waves) show far too little.
+/// Adding up a big folder takes a moment, so the app only asks for games it hasn't measured
+/// since their last update, and it runs in the background.
+#[tauri::command(async)]
+pub fn steam_folder_sizes(appids: Vec<u32>) -> Vec<(u32, u64)> {
+    let mut out = Vec::new();
+    for lib in steam_libraries() {
+        for &appid in &appids {
+            let manifest = lib.join("steamapps").join(format!("appmanifest_{appid}.acf"));
+            let Ok(text) = std::fs::read_to_string(&manifest) else { continue };
+            let Some(dir) = vdf_values(&text, "installdir").into_iter().next() else { continue };
+            // Only a plain folder name inside steamapps\common (never "..", never a full path)
+            if dir.is_empty() || dir.contains(['/', '\\', ':']) || dir == ".." || dir == "." {
+                continue;
+            }
+            let path = lib.join("steamapps").join("common").join(dir);
+            if path.is_dir() {
+                out.push((appid, folder_size(&path)));
+            }
+        }
+    }
+    out
+}
+
+/// Total size of all files in a folder and its subfolders (shortcuts/links are not followed)
+fn folder_size(root: &std::path::Path) -> u64 {
+    let mut total = 0;
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        for entry in entries.flatten() {
+            let Ok(meta) = std::fs::symlink_metadata(entry.path()) else { continue };
+            if meta.is_dir() {
+                stack.push(entry.path());
+            } else if meta.is_file() {
+                total += meta.len();
+            }
+        }
+    }
+    total
+}
+
 /// Short state per game for the library's Play / Install buttons:
 /// "ready" | "installing" | "updating" | "install-paused" | "update-paused".
 /// Games without an install file are simply not in the list (= not installed).
@@ -155,3 +199,4 @@ mod tests {
         }
     }
 }
+

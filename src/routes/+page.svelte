@@ -131,9 +131,6 @@
 </script>
 
 <div class="page">
-  {#if !account.steamid}
-    <SignInCard />
-  {:else}
     <!-- Title, search and controls on one row (like the Store) -->
     <div class="bar">
       <h1>Library <span class="count">{games.length} games</span></h1>
@@ -151,8 +148,15 @@
         Filters{activeFilters ? ` (${activeFilters})` : ""}
       </button>
 
-      <button class="ghost signout" onclick={signOut}>Sign out</button>
+      {#if account.steamid}
+        <button class="ghost signout" onclick={signOut}>Sign out</button>
+      {/if}
     </div>
+
+    {#if !account.steamid && settings.librarySteam}
+      <!-- Not signed in to Steam: your Epic games still show below -->
+      <SignInCard compact title="Sign in with Steam to see your Steam games here" />
+    {/if}
 
     {#if library.games.length && library.status !== "private"}
       <!-- Latest news of your 10 most recently played games (hidden in short windows) -->
@@ -189,7 +193,9 @@
           </div>
         {/if}
         <div class="grid-wrap">
-          {#if games.length === 0}
+          {#if allItems.length === 0}
+            <p class="dim">No games to show yet.</p>
+          {:else if games.length === 0}
             <p class="dim">
               No games match {activeFilters ? "these filters" : "your search"}.
               {#if activeFilters}<button class="link" onclick={clearFilters}>Clear filters</button>{/if}
@@ -208,7 +214,6 @@
         </div>
       </div>
     {/if}
-  {/if}
 </div>
 
 <style>

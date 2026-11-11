@@ -15,6 +15,21 @@
   import { me, refreshProfile, statusText, statusKind } from "$lib/profile.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { onMount } from "svelte";
+  import { downloadsBadge, refreshDownloadsBadge } from "$lib/downloadsBadge.svelte";
+  import { epic, loadEpic } from "$lib/epic.svelte";
+
+  // ---------- Dot on "Downloads": updates waiting or downloads going (Steam + Epic) ----------
+  // Checked at startup and when you come back to the window (at most once a minute)
+  onMount(() => {
+    const check = () => {
+      refreshDownloadsBadge();
+      loadEpic();
+    };
+    check();
+    window.addEventListener("focus", check);
+    return () => window.removeEventListener("focus", check);
+  });
+  const pendingDownloads = $derived(downloadsBadge.steam + epic.games.filter((g) => g.installing).length);
 
   // ---------- Your profile box (bottom) ----------
   // Loads when you sign in / out; refreshed when you come back to the window (max once a minute).
@@ -222,6 +237,13 @@
         >
           <Icon d={tab.icon} />
           {tab.label}
+          {#if tab.id === "downloads" && pendingDownloads}
+            <span
+              class="badge-dot"
+              title={pendingDownloads + (pendingDownloads === 1 ? " update or download" : " updates or downloads")}
+              aria-label={pendingDownloads + " pending"}
+            ></span>
+          {/if}
         </a>
         {#if tab.id !== "library"}
           <button class="hide" onclick={() => hide(tab)} aria-label={"Hide " + tab.label} title="Hide this tab">
@@ -411,6 +433,12 @@
   a:hover :global(svg) { opacity: 1; }
   a.active :global(svg) { color: var(--accent); opacity: 1; }
   .brand :global(svg) { opacity: 1; }
+  /* Small dot on "Downloads" when an update or download is waiting */
+  .badge-dot {
+    width: 7px; height: 7px; border-radius: 50%; margin-left: 2px; flex-shrink: 0;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
   /* ---------- Drag and hide ---------- */
   nav { user-select: none; }
   nav.dragging, nav.dragging a { cursor: grabbing; }

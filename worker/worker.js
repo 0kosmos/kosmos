@@ -225,6 +225,45 @@ async function storeQuery({ start = 0, count = 100, sort = 11, tagids = [], disc
 }
 
 // Best deals: popular games at least 25% off with at least 80% positive reviews
+// ---------- Epic Games Store: free games ----------
+// Epic's public "free games" list (the one free-game trackers use): this week's free games and
+// next week's. Epic marks a free promotion with a 0 "discount percentage". Kept for an hour.
+async function epicFree(cc) {
+  const u = `https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en-US&country=${cc}&allowCountries=${cc}`;
+  const res = await fetch(u, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  if (!res.ok) throw new Error("Epic answered " + res.status);
+  const els = (await res.json())?.data?.Catalog?.searchStore?.elements || [];
+  const freeOffer = (groups) =>
+    (groups || []).flatMap((g) => g.promotionalOffers || []).find((o) => o.discountSetting?.discountPercentage === 0);
+  const now = Date.now();
+  const items = [];
+  for (const e of els) {
+    const current = freeOffer(e.promotions?.promotionalOffers);
+    const upcoming = freeOffer(e.promotions?.upcomingPromotionalOffers);
+    const offer = current || upcoming;
+    if (!offer) continue;
+    const start = Date.parse(offer.startDate) || 0;
+    const end = Date.parse(offer.endDate) || 0;
+    const live = !!current && start <= now && (!end || now < end);
+    if (!live && !upcoming) continue;
+    const img = (type) => (e.keyImages || []).find((k) => k.type === type)?.url || "";
+    const slug =
+      e.offerMappings?.[0]?.pageSlug || e.catalogNs?.mappings?.[0]?.pageSlug || (e.productSlug || "").replace(/\/home$/, "");
+    const original = e.price?.totalPrice?.fmtPrice?.originalPrice || "";
+    items.push({
+      title: e.title || "",
+      slug: /^[a-z0-9-]{1,120}$/i.test(slug) ? slug : "",
+      image: img("OfferImageWide") || img("DieselStoreFrontWide") || img("Thumbnail") || img("OfferImageTall"),
+      now: live,
+      start,
+      end,
+      originalPrice: original === "0" ? "" : original, // "" = a game that's always free
+    });
+  }
+  items.sort((a, b) => Number(b.now) - Number(a.now) || a.start - b.start);
+  return items;
+}
+
 async function storeDeals(cc, prefs) {
   const { items } = await storeQuery({ count: 100, sort: 11, discounted: true }, cc);
   return items
@@ -1040,6 +1079,9 @@ export default {
         const cc = /^[A-Z]{2}$/.test(ccParam) ? ccParam : (request.cf && request.cf.country) || "US";
         const prefs = readPrefs(url.searchParams); // mature content + platform settings
 
+        if (url.pathname === "/store/epic-free") {
+          return json({ cc, items: await epicFree(cc) }, 200, 1800);
+        }
         if (url.pathname === "/store/deals") {
           return json({ cc, items: await storeDeals(cc, prefs) }, 200, 1800);
         }

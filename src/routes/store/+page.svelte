@@ -1,9 +1,28 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import StoreCard from "$lib/components/StoreCard.svelte";
+  import EpicFreeCard from "$lib/components/EpicFreeCard.svelte";
   import {
-    fetchDeals, searchStore, browseStore, STORE_TAGS, type StoreGame, type BrowseQuery, type Hidden,
+    fetchDeals, searchStore, browseStore, fetchEpicFree, STORE_TAGS,
+    type StoreGame, type BrowseQuery, type Hidden, type EpicFreeGame,
   } from "$lib/store";
+  import { settings, setStoreEpic } from "$lib/settings.svelte";
+  import { loadEpic } from "$lib/epic.svelte";
+
+  // ---------- Epic Games: free games (only loaded while Epic is turned on) ----------
+  let epicFree = $state<EpicFreeGame[]>([]);
+  let epicStatus = $state<"loading" | "ready" | "error">("loading");
+  let epicAsked = false;
+  $effect(() => {
+    if (!settings.storeEpic || epicAsked) return;
+    epicAsked = true;
+    loadEpic(); // your Epic library, for the "In library" label
+    fetchEpicFree()
+      .then((list) => {
+        epicFree = list;
+        epicStatus = "ready";
+      })
+      .catch(() => (epicStatus = "error"));
+  });
 
   // ---------- Filters (remembered) ----------
   const SAVE_KEY = "kosmos-store-filters-v1";
@@ -70,7 +89,11 @@
 
   let deals = $state<StoreGame[]>([]);
   let dealsStatus = $state<"loading" | "ready" | "error">("loading");
-  onMount(() => {
+  // Loaded once when the Store opens
+  let dealsAsked = false;
+  $effect(() => {
+    if (dealsAsked) return;
+    dealsAsked = true;
     fetchDeals()
       .then((d) => {
         deals = d;
@@ -244,7 +267,7 @@
 <div class="page">
   <div class="head">
     <h1>Store</h1>
-    <input class="search" type="search" placeholder="Search the store..." bind:value={search} />
+    <input class="search" type="search" placeholder="Search Steam..." bind:value={search} />
     {#if searchStatus === "idle"}
       <!-- Sort (and Filters in narrow windows) next to the search, like in the Library -->
       <select bind:value={f.sort} onchange={saveFilters} aria-label="Sort">
@@ -258,6 +281,11 @@
         </button>
       {/if}
     {/if}
+    <!-- Show Epic's free games (same switch as Settings → Store) -->
+    <label class="source">
+      <input type="checkbox" checked={settings.storeEpic} onchange={() => setStoreEpic(!settings.storeEpic)} />
+      Epic Games
+    </label>
   </div>
 
   {#if searchStatus !== "idle"}
@@ -307,6 +335,24 @@
       {/if}
     </section>
   {:else}
+    {#if settings.storeEpic}
+      <!-- ---------- Epic Games: free games ---------- -->
+      <section class="deals-section">
+        <h2 class="section-head plain">Free on Epic Games</h2>
+        {#if epicStatus === "loading"}
+          <p class="dim">Loading free games...</p>
+        {:else if epicStatus === "error"}
+          <p class="dim">Couldn't load Epic's free games right now.</p>
+        {:else if epicFree.length === 0}
+          <p class="dim">No free games on Epic right now.</p>
+        {:else}
+          <div class="deals">
+            {#each epicFree as g (g.title + g.start)}<div class="deal"><EpicFreeCard game={g} /></div>{/each}
+          </div>
+        {/if}
+      </section>
+    {/if}
+
     <!-- ---------- Best deals ---------- -->
     <section class="deals-section">
       <!-- Click to show / hide (remembered), same as "News and updates" in the Library -->
@@ -426,6 +472,17 @@
     background: none; border: none;
   }
   .section-head:hover { color: var(--text); }
+  .section-head.plain:hover { color: var(--text-dim); } /* a title, not a button */
+
+  /* "Epic Games" checkbox at the top right */
+  .source {
+    display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+    padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: var(--fs-md); color: var(--text-dim); cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .source:hover { color: var(--text); border-color: var(--text-dim); }
+  .source input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
   .chev { transition: transform 0.15s; display: inline-block; }
   .chev.open { transform: rotate(90deg); }
   .dim { color: var(--text-dim); margin: 0; }

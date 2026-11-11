@@ -41,12 +41,6 @@
         },
         {
           "url": "steam://openurl/https://steamcommunity.com/groups/*"
-        },
-        {
-          "url": "com.epicgames.launcher://apps/*"
-        },
-        {
-          "url": "com.epicgames.launcher://library"
         }
       ]
     }

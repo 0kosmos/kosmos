@@ -1,35 +1,33 @@
 # Kosmos
 
-A fast, clean and customizable companion app for Steam.
+**One fast, clean home for your PC games.**
 
-Kosmos doesn't replace Steam. Steam keeps running in the background, and Kosmos gives you a simpler, more personal interface on top of it.
+Kosmos brings your Steam and Epic Games libraries together in one simple app. Your games still launch through Steam and Epic. Kosmos just gives you a better place to find, organize and play them.
 
-> Early development. Features are still being added.
+## Made for every PC
 
-## Why Kosmos?
+Kosmos is built to run smoothly on lower-end PCs too. It installs small, uses little memory and does almost nothing in the background. The goal is simple: browsing your library, the store or the market should feel fast, with no lag.
 
-- **Lighter:** built with Tauri instead of Electron, so it has a small install size and low memory use. It also has a "reduce motion" option that turns off animations for older PCs.
-- **Customizable:** turn tabs on or off and reorder them, so you only see what you use.
-- **Cleaner:** a minimal interface focused on your library and your games.
-- **Safe:** you sign in through Steam, and Kosmos never sees or stores your password.
+## A more organized library
 
-## Features
+- All your Steam and Epic games in one place, with one search
+- Filters for installed, not installed, played, never played and recently played
+- Clear game pages with details, screenshots, reviews and news
+- Rediscover games you forgot you had, like free games you claimed and never opened
 
-- Library with search, sorting and filters
-- Game pages with screenshots, details, reviews and a Play button that launches the game through Steam
-- Black and white themes
-- Settings with tab management and reduce motion
+## What's inside
 
-## Coming soon
+- **Library:** Steam and Epic games together, with Play and Install buttons
+- **Store:** Steam deals, filters and search, plus this week's free games on Epic
+- **Downloads:** your installed games, updates and real sizes on disk
+- **Market:** search the Steam Community Market
+- **Friends and Groups:** who's online, what they're playing, and your groups
+- **Your way:** black or white theme, accent colors, and a sidebar you can reorder
 
-- Store view, wishlist and price alerts
-- Workshop browser
-- Profile and friends
+## Safe
 
-## Built with
+You sign in on Steam's own website. Kosmos never sees your password and never touches your games.
 
-Tauri 2, Svelte (SvelteKit) and TypeScript.
+---
 
-## Disclaimer
-
-Kosmos is an independent project. It isn't affiliated with, endorsed by or sponsored by Valve Corporation. Steam and the Steam logo are trademarks of Valve Corporation.
+Kosmos is an independent project, not affiliated with Valve or Epic Games. Steam is a trademark of Valve Corporation. Epic Games is a trademark of Epic Games, Inc.

@@ -6,6 +6,7 @@
     setReduceMotion,
     setLiveStats,
     setLibrarySource,
+    setStoreEpic,
     setCloseToTray,
     setTheme,
     setAccent,
@@ -247,6 +248,21 @@
     </div>
   </section>
 {:else if cat === "store"}
+  <section>
+    <h2>Epic Games</h2>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Free games on Epic Games</strong>
+          <p class="dim">This week's free games on the Epic Games Store, and next week's, at the top of the Store. Same as the Epic Games checkbox in the Store.</p>
+        </div>
+        <button class="switch" role="switch" aria-checked={settings.storeEpic} aria-label="Show Epic Games free games" onclick={() => setStoreEpic(!settings.storeEpic)}>
+          <span class="knob"></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
   <section>
     <h2>Region and currency</h2>
     <div class="group">
