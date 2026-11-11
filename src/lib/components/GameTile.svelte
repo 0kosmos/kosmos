@@ -1,17 +1,24 @@
 <script lang="ts">
-  import type { Game } from "$lib/fakeGames";
+  import type { Game } from "$lib/library.svelte";
 
   let { game }: { game: Game } = $props();
 
+  let failed = $state(false);
   const hue = $derived((game.appid * 47) % 360);
+  const cover = $derived(
+    `https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/library_600x900.jpg`
+  );
 </script>
 
 <article class="tile">
   <div class="cover" style="--hue: {hue}">
-    <span>{game.name.charAt(0)}</span>
-    {#if game.installed}<em>Installed</em>{/if}
+    {#if failed}
+      <span>{game.name.charAt(0)}</span>
+    {:else}
+      <img src={cover} alt="" loading="lazy" decoding="async" onerror={() => (failed = true)} />
+    {/if}
   </div>
-  <h3>{game.name}</h3>
+  <h3 title={game.name}>{game.name}</h3>
   <p>{game.hours} h played</p>
 </article>
 
@@ -26,9 +33,9 @@
     padding: 8px;
   }
   .cover {
-    position: relative;
     aspect-ratio: 2 / 3;
     border-radius: 8px;
+    overflow: hidden;
     display: grid;
     place-items: center;
     background: linear-gradient(160deg, hsl(var(--hue) 55% 38%), hsl(calc(var(--hue) + 40) 50% 18%));
@@ -38,15 +45,11 @@
     font-weight: 700;
     opacity: 0.85;
   }
-  em {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    font-style: normal;
-    font-size: 0.7rem;
-    padding: 2px 7px;
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.55);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
   h3 {
     margin: 8px 2px 2px;

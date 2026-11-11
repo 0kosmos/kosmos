@@ -1,0 +1,1 @@
+export const API_BASE = "https://kosmos-api.kosmosinfo2026.workers.dev";
