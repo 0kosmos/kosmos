@@ -69,6 +69,40 @@ async function getReviews(appid) {
   return raw.response || raw;
 }
 
+// ---------- Store tags (the user-voted tags you see on a Steam store page) ----------
+// Steam gives a game's tags as numbers; a separate list turns numbers into names.
+async function getTags(appid) {
+  const itemsUrl = new URL("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/");
+  itemsUrl.searchParams.set(
+    "input_json",
+    JSON.stringify({
+      ids: [{ appid: Number(appid) }],
+      context: { language: "english", country_code: "US" },
+      data_request: { include_tag_count: 20 },
+    })
+  );
+  const [itemsRes, listRes] = await Promise.all([
+    fetch(itemsUrl.toString(), { cf: { cacheTtl: 86400, cacheEverything: true } }),
+    // The list of all tag names barely changes: remember it for a week
+    fetch("https://api.steampowered.com/IStoreService/GetTagList/v1/?language=english", {
+      cf: { cacheTtl: 604800, cacheEverything: true },
+    }),
+  ]);
+  if (!itemsRes.ok || !listRes.ok) return [];
+  const items = await itemsRes.json();
+  const list = await listRes.json();
+
+  const names = {};
+  for (const t of (list.response && list.response.tags) || []) names[t.tagid] = t.name;
+  const item = items.response && items.response.store_items && items.response.store_items[0];
+  const tags = (item && item.tags) || [];
+  return tags
+    .slice()
+    .sort((a, b) => (b.weight || 0) - (a.weight || 0)) // most-voted first, like Steam
+    .map((t) => names[t.tagid])
+    .filter(Boolean);
+}
+
 // PC specs a reviewer chose to share on Steam (null if they didn't)
 function cleanHardware(h) {
   if (!h || typeof h !== "object") return null;
@@ -497,9 +531,10 @@ export default {
           return json({ error: "Please add ?appid=<number>" }, 400);
         }
 
-        const [detailsRaw, rv] = await Promise.all([
+        const [detailsRaw, rv, tags] = await Promise.all([
           storeJson(`https://store.steampowered.com/api/appdetails?appids=${appid}&l=english`),
           getReviews(appid).catch((e) => ({ failed: String(e && e.message) })),
+          getTags(appid).catch(() => []), // tags are a bonus: never break the page over them
         ]);
 
         const entry = detailsRaw && detailsRaw[appid];
@@ -537,6 +572,7 @@ export default {
               ? "ok"
               : "no summary, got: " + Object.keys(rv).join(","),
             genres: (d.genres || []).map((g) => g.description),
+            tags,
             header: d.header_image || "",
             screenshots: (d.screenshots || []).slice(0, 12).map((s) => ({
               thumb: s.path_thumbnail,

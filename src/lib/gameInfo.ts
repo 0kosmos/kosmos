@@ -9,6 +9,7 @@ export interface GameInfo {
   publishers?: string[];
   releaseDate?: string;
   genres?: string[];
+  tags?: string[]; // user-voted store tags, most popular first
   header?: string;
   screenshots?: { thumb: string; full: string }[];
   requirements?: { minimum: string; recommended: string };
@@ -99,7 +100,8 @@ export async function fetchGameInfo(appid: number): Promise<GameInfo> {
   const hit = memory.get(appid);
   if (hit) return hit;
 
-     const res = await fetch(`${API_BASE}/game?appid=${appid}&v=2`);
+     const res = await fetch(`${API_BASE}/game?appid=${appid}&v=4`);
+  // ("v" changes whenever the Worker starts sending new fields, so old cached answers aren't reused)
   if (!res.ok) throw new Error("Request failed");
   const info = (await res.json()) as GameInfo;
 

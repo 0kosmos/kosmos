@@ -9,7 +9,13 @@
     "deep-link:default",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "steam://run/*" }]
+      "allow": [
+        { "url": "steam://run/*" },
+        { "url": "steam://install/*" },
+        { "url": "steam://nav/downloads" },
+        { "url": "steam://openurl/https://store.steampowered.com/recommended/recommendgame/*" },
+        { "url": "steam://openurl/https://store.steampowered.com/app/*" }
+      ]
     }
   ]
 }

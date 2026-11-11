@@ -1,5 +1,34 @@
 use tauri::Manager;
 
+/// Whether Steam has a game installed / updating / running.
+/// Steam keeps this in the Windows registry under
+/// HKEY_CURRENT_USER\Software\Valve\Steam\Apps\<appid>. Reading it is instant and
+/// never touches the game itself.
+#[derive(serde::Serialize, Default)]
+struct AppState {
+    installed: bool,
+    updating: bool,
+    running: bool,
+}
+
+#[tauri::command]
+fn steam_app_state(appid: u32) -> AppState {
+    #[cfg(windows)]
+    {
+        let path = format!(r"Software\Valve\Steam\Apps\{appid}");
+        if let Ok(key) = windows_registry::CURRENT_USER.open(&path) {
+            let flag = |name: &str| key.get_u32(name).map(|v| v != 0).unwrap_or(false);
+            return AppState {
+                installed: flag("Installed"),
+                updating: flag("Updating"),
+                running: flag("Running"),
+            };
+        }
+    }
+    let _ = appid;
+    AppState::default()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
@@ -22,6 +51,7 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![steam_app_state])
         .setup(|_app| {
             // The installer registers kosmos:// links with Windows. In dev builds there's no
             // installer, so register them here (only for the current Windows user).

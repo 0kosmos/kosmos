@@ -5,6 +5,42 @@
   import { library } from "$lib/library.svelte";
   import { fetchGameInfo, fetchReviews, type GameInfo, type Review } from "$lib/gameInfo";
   import NewsRow from "$lib/components/NewsRow.svelte";
+  import { invoke } from "@tauri-apps/api/core";
+
+  // ---------- Installed / updating state (read from Steam's registry entry) ----------
+  type AppState = { installed: boolean; updating: boolean; running: boolean };
+  let appState = $state<AppState | null>(null);
+
+  async function refreshAppState() {
+    const id = appid;
+    if (!id) return;
+    try {
+      const s = await invoke<AppState>("steam_app_state", { appid: id });
+      if (id === appid) appState = s;
+    } catch {
+      appState = null; // unknown: we just show Play
+    }
+  }
+
+  // Check when the game opens, and again when you come back to the window
+  // (e.g. after installing in Steam). No polling.
+  $effect(() => {
+    appid;
+    appState = null;
+    refreshAppState();
+    const onFocus = () => refreshAppState();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  });
+
+  async function steamLink(link: string) {
+    playError = "";
+    try {
+      await openUrl(link);
+    } catch {
+      playError = "Couldn't open Steam. Is Steam installed on this PC?";
+    }
+  }
 
   const appid = $derived(Number(page.url.searchParams.get("id")));
   const mine = $derived(library.games.find((g) => g.appid === appid));
@@ -13,6 +49,7 @@
   let status = $state<"loading" | "ready" | "error">("loading");
   let shot = $state(0);
   let playError = $state("");
+  let allTags = $state(false); // "+N more" tags expanded
 
   $effect(() => {
     const id = appid;
@@ -21,6 +58,7 @@
     shot = 0;
     playError = "";
     reqTab = "min";
+    allTags = false;
     if (!id) {
       status = "error";
       return;
@@ -169,16 +207,61 @@
       <div class="meta">
         <h1>{title}</h1>
         {#if info.available}
-          {#if info.genres?.length}
+          <!-- Steam's popular tags (falls back to genres if Steam sent no tags) -->
+          {@const tags = info.tags?.length ? info.tags : (info.genres ?? [])}
+          {#if tags.length}
             <div class="chips">
-              {#each info.genres as g}<span>{g}</span>{/each}
+              {#each allTags ? tags : tags.slice(0, 10) as t}<span>{t}</span>{/each}
+              {#if tags.length > 10}
+                <button class="chip-more" onclick={() => (allTags = !allTags)}>
+                  {allTags ? "Show less" : `+${tags.length - 10}`}
+                </button>
+              {/if}
             </div>
           {/if}
         {:else}
           <p class="dim">This game has no Steam store page (it may have been removed).</p>
         {/if}
         <div class="actions">
-          <button class="play" onclick={play}>▶ Play</button>
+          {#if appState && !appState.installed}
+            <button class="play" onclick={() => steamLink(`steam://install/${appid}`)}>⬇ Install</button>
+          {:else}
+            <button class="play" onclick={play}>▶ Play</button>
+          {/if}
+
+          {#if appState?.installed}
+            <button
+              class="secondary"
+              onclick={() => steamLink("steam://nav/downloads")}
+              title="Opens Steam's Downloads page, where updates are queued and started"
+            >
+              Check for updates
+            </button>
+          {/if}
+
+          <button
+            class="secondary"
+            onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/app/${appid}/`)}
+            title="Opens this game's store page in the Steam client"
+          >
+            Store page ↗
+          </button>
+
+          {#if mine}
+            <button
+              class="secondary"
+              onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/recommended/recommendgame/${appid}`)}
+              title="Opens the review page in the Steam client"
+            >
+              ✎ Write a review
+            </button>
+          {/if}
+
+          {#if appState?.updating}
+            <span class="badge">Steam is updating this game</span>
+          {:else if appState?.running}
+            <span class="badge">Running</span>
+          {/if}
           {#if mine}<span class="dim">{mine.hours} h played</span>{/if}
           {#if playError}<span class="err">{playError}</span>{/if}
         </div>
@@ -391,11 +474,28 @@
     background: var(--surface-2); border: 1px solid var(--border);
   }
   .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
-  .play {
-    background: var(--accent); color: var(--on-accent); border: none;
-    border-radius: var(--radius); padding: 10px 28px; font-weight: 700; font-size: 1rem;
+  /* Play / Install / Updates / Write a review: all the same size */
+  .play, .secondary {
+    height: 42px; min-width: 150px; padding: 0 22px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: var(--radius); font-weight: 700; font-size: 1rem; white-space: nowrap;
   }
+  .play { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
   .play:hover { filter: brightness(1.1); }
+  .secondary {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .chip-more {
+    font-size: 0.8rem; padding: 3px 10px; border-radius: 999px;
+    background: transparent; border: 1px dashed var(--border); color: var(--text-dim);
+  }
+  .chip-more:hover { color: var(--text); border-color: var(--text-dim); }
+  .secondary:hover { border-color: var(--text-dim); }
+  .badge {
+    font-size: var(--fs-sm); padding: 4px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text);
+  }
   section { margin-bottom: 28px; }
   .shot { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius); display: block; background: var(--surface); }
   .thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 6px; }

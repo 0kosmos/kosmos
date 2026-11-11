@@ -1972,6 +1972,7 @@ dependencies = [
  "tauri-plugin-deep-link",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
+ "windows-registry",
 ]
 
 [[package]]
