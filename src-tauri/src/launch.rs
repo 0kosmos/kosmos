@@ -15,8 +15,8 @@ pub struct LaunchInputs {
 #[derive(serde::Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemInfo {
-    cpu_threads: u32,
-    ram_gb: u32,
+    pub(crate) cpu_threads: u32,
+    pub(crate) ram_gb: u32,
 }
 
 #[derive(serde::Serialize, Clone)]

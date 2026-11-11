@@ -7,7 +7,13 @@ interface Settings {
   enabled: Record<TabId, boolean>;
   reduceMotion: boolean;
   theme: Theme;
+  sidebarWidth: number; // px, dragged with the handle on the sidebar's right edge
 }
+
+// Sidebar width: default 220 px; at most 2 game columns wider (2 x (160 px tile + 14 px gap))
+export const SIDEBAR_MIN = 220;
+export const SIDEBAR_MAX = SIDEBAR_MIN + 2 * (160 + 14);
+export const clampSidebar = (w: number) => Math.round(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, w)));
 
 const KEY = "kosmos-settings-v1";
 const ALL_IDS = TABS.map((t) => t.id);
@@ -15,7 +21,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), theme: "dark" };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), theme: "dark", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -52,6 +58,7 @@ function load(): Settings {
       reduceMotion:
         typeof saved.reduceMotion === "boolean" ? saved.reduceMotion : !!saved.performanceMode,
       theme,
+      sidebarWidth: clampSidebar(Number(saved.sidebarWidth) || SIDEBAR_MIN),
     };
   } catch {
     return base;
@@ -100,6 +107,11 @@ export function reorderVisible(newVisible: TabId[]) {
 
 export function setReduceMotion(on: boolean) {
   settings.reduceMotion = on;
+  save();
+}
+
+export function setSidebarWidth(w: number) {
+  settings.sidebarWidth = clampSidebar(w);
   save();
 }
 

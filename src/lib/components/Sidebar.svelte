@@ -7,6 +7,55 @@
   import { flip } from "svelte/animate";
   import { playing } from "$lib/playing.svelte";
   import { library } from "$lib/library.svelte";
+  import { pc, togglePcPanel, loadPcInfo } from "$lib/pcInfo.svelte";
+  import { setSidebarWidth, clampSidebar, SIDEBAR_MIN, SIDEBAR_MAX } from "$lib/settings.svelte";
+
+  // ---------- Resize the sidebar by dragging its right edge ----------
+  // While dragging we only change the CSS width (cheap); it's saved when you let go.
+  // Double-click the edge to go back to the default width.
+  let resizing = $state(false);
+  let resizeStartX = 0;
+  let resizeStartW = 0;
+  let liveW = 0;
+
+  function setLiveWidth(w: number) {
+    liveW = clampSidebar(w);
+    document.documentElement.style.setProperty("--sidebar-w", liveW + "px");
+  }
+
+  function onResizeDown(e: PointerEvent) {
+    if (e.button !== 0) return;
+    resizing = true;
+    resizeStartX = e.clientX;
+    resizeStartW = settings.sidebarWidth;
+    liveW = resizeStartW;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onResizeMove(e: PointerEvent) {
+    if (resizing) setLiveWidth(resizeStartW + e.clientX - resizeStartX);
+  }
+
+  function onResizeUp() {
+    if (!resizing) return;
+    resizing = false;
+    setSidebarWidth(liveW);
+  }
+
+  function onResizeKey(e: KeyboardEvent) {
+    const step = e.shiftKey ? 50 : 10;
+    if (e.key === "ArrowRight") setSidebarWidth(settings.sidebarWidth + step);
+    else if (e.key === "ArrowLeft") setSidebarWidth(settings.sidebarWidth - step);
+    else return;
+    e.preventDefault();
+  }
+
+  // If the panel was left open last time, refresh its info once at startup
+  $effect(() => {
+    if (pc.open) loadPcInfo();
+  });
+
+  const CHIP = "M7 7h10v10H7z M10 3v4 M14 3v4 M10 17v4 M14 17v4 M3 10h4 M3 14h4 M17 10h4 M17 14h4";
 
   // Name of the running game: from your library first, then Steam's registry entry
   const playingName = $derived(
@@ -169,16 +218,61 @@
     </a>
   {/if}
 
+  <!-- My PC: collapsible, info read once from Windows -->
+  <div class="pc">
+    <button class="pc-head" onclick={togglePcPanel} aria-expanded={pc.open}>
+      <Icon d={CHIP} />
+      <span>My PC</span>
+      <span class="chev" class:open={pc.open} aria-hidden="true">›</span>
+    </button>
+    {#if pc.open}
+      {#if pc.info}
+        <dl class="pc-body">
+          {#each pc.info.gpus as g}
+            <dt>GPU</dt><dd title={g.name}>{g.name}{g.vramGb ? ` · ${g.vramGb} GB` : ""}</dd>
+          {/each}
+          <dt>CPU</dt><dd title={pc.info.cpu}>{pc.info.cpu}{pc.info.cpuThreads ? ` · ${pc.info.cpuThreads} threads` : ""}</dd>
+          <dt>RAM</dt><dd>{pc.info.ramGb} GB</dd>
+          <dt>OS</dt><dd title={pc.info.os}>{pc.info.os}</dd>
+        </dl>
+      {:else}
+        <p class="pc-body dim">Reading...</p>
+      {/if}
+    {/if}
+  </div>
+
   <div class="bottom">
     <a href={SETTINGS_TAB.path} class:active={page.url.pathname === SETTINGS_TAB.path}>
       <Icon d={SETTINGS_TAB.icon} />
       {SETTINGS_TAB.label}
     </a>
   </div>
+  <!-- Drag to resize; double-click to reset. A focusable "separator" is the standard accessible
+       window-splitter pattern (arrow keys resize it), so these two warnings don't apply. -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+  <div
+    class="resize"
+    class:active={resizing}
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Resize sidebar"
+    aria-valuemin={SIDEBAR_MIN}
+    aria-valuemax={SIDEBAR_MAX}
+    aria-valuenow={settings.sidebarWidth}
+    tabindex="0"
+    title="Drag to resize · double-click to reset"
+    onpointerdown={onResizeDown}
+    onpointermove={onResizeMove}
+    onpointerup={onResizeUp}
+    onpointercancel={onResizeUp}
+    ondblclick={() => setSidebarWidth(SIDEBAR_MIN)}
+    onkeydown={onResizeKey}
+  ></div>
 </aside>
 
 <style>
   .sidebar {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -186,7 +280,20 @@
     background: var(--surface);
     border-right: 1px solid var(--border);
     height: 100%;
+    min-width: 0;
   }
+
+  /* Invisible 8 px grab area on the right edge; shows an accent line on hover / drag */
+  .resize {
+    position: absolute; top: 0; right: -4px; bottom: 0; width: 8px; z-index: 5;
+    cursor: col-resize; touch-action: none;
+  }
+  .resize::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px;
+    background: var(--accent); opacity: 0; transition: opacity 0.15s;
+  }
+  .resize:hover::after, .resize.active::after, .resize:focus-visible::after { opacity: 1; }
+  .resize:focus-visible { outline: none; }
   .brand {
     display: flex;
     align-items: center;
@@ -266,6 +373,26 @@
     color: var(--text-dim);
   }
   .hidden-link:hover { background: none; text-decoration: underline; }
+
+  /* ---------- My PC ---------- */
+  .pc { border-top: 1px solid var(--border); padding-top: 8px; }
+  .pc-head {
+    width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    background: transparent; border: none; border-radius: var(--radius);
+    color: var(--text-dim); font-size: var(--fs-md); font-weight: 500; text-align: left;
+    transition: background 0.15s, color 0.15s;
+  }
+  .pc-head:hover { background: var(--hover); color: var(--text); }
+  .chev { margin-left: auto; transition: transform 0.15s; }
+  .chev.open { transform: rotate(90deg); }
+  .pc-body {
+    margin: 4px 0 6px; padding: 10px 12px; border-radius: var(--radius);
+    background: var(--surface-2); font-size: 0.78rem;
+    display: grid; grid-template-columns: auto 1fr; gap: 5px 10px;
+  }
+  .pc-body dt { color: var(--text-dim); }
+  .pc-body dd { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dim { color: var(--text-dim); margin: 4px 12px; }
 
   /* ---------- Currently playing ---------- */
   .playing {

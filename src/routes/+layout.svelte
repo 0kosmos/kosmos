@@ -29,6 +29,10 @@
   $effect(() => {
     document.documentElement.dataset.theme = settings.theme;
   });
+
+  $effect(() => {
+    document.documentElement.style.setProperty("--sidebar-w", settings.sidebarWidth + "px");
+  });
 </script>
 
 <div class="app">

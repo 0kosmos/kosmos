@@ -2,6 +2,7 @@ use tauri::Manager;
 
 mod downloads;
 mod launch;
+mod pcinfo;
 
 // ---------- Currently playing ----------
 // Steam writes the running game's ID to HKCU\Software\Valve\Steam\RunningAppID (0 = none).
@@ -111,7 +112,8 @@ pub fn run() {
             launch::system_info,
             launch::measure_launch,
             downloads::steam_installs,
-            downloads::install_states
+            downloads::install_states,
+            pcinfo::pc_info
         ])
         .setup(|_app| {
             // Watch for the game Steam is running (for "Currently playing" in the sidebar)
