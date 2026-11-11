@@ -6,6 +6,7 @@ export interface GameInfo {
   name?: string;
   shortDescription?: string;
   developers?: string[];
+  publishers?: string[];
   releaseDate?: string;
   genres?: string[];
   header?: string;
