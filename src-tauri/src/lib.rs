@@ -1,5 +1,7 @@
 use tauri::Manager;
 
+mod launch;
+
 /// Whether Steam has a game installed / updating / running.
 /// Steam keeps this in the Windows registry under
 /// HKEY_CURRENT_USER\Software\Valve\Steam\Apps\<appid>. Reading it is instant and
@@ -160,7 +162,14 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![steam_app_state, running_app, installed_apps])
+        .invoke_handler(tauri::generate_handler![
+            steam_app_state,
+            running_app,
+            installed_apps,
+            launch::launch_inputs,
+            launch::system_info,
+            launch::measure_launch
+        ])
         .setup(|_app| {
             // Watch for the game Steam is running (for "Currently playing" in the sidebar)
             #[cfg(windows)]

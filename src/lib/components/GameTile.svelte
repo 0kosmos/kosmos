@@ -5,6 +5,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { installed } from "$lib/installed.svelte";
   import { playing } from "$lib/playing.svelte";
+  import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
 
   let { game }: { game: Game } = $props();
 
@@ -13,8 +14,9 @@
   const isRunning = $derived(playing.appid === game.appid);
 
   function quickAction() {
-    const link = isInstalled ? `steam://run/${game.appid}` : `steam://install/${game.appid}`;
-    openUrl(link).catch(() => {});
+    hideLaunchTip();
+    if (isInstalled) playAndTime(game.appid).catch(() => {});
+    else openUrl(`steam://install/${game.appid}`).catch(() => {});
   }
 
   const CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps";
@@ -81,6 +83,8 @@
       class="quick"
       class:install={!isInstalled}
       onclick={quickAction}
+      onpointerenter={(e) => isInstalled && showLaunchTip(game.appid, e.currentTarget)}
+      onpointerleave={hideLaunchTip}
       aria-label={(isInstalled ? "Play " : "Install ") + game.name}
     >
       {isInstalled ? "▶ Play" : "⬇ Install"}

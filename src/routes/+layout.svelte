@@ -7,6 +7,8 @@
   import { onMount } from "svelte";
   import { listenForSignIn } from "$lib/auth.svelte";
   import { watchPlaying } from "$lib/playing.svelte";
+  import { listenForLaunchTimes, hideLaunchTip } from "$lib/launchTime.svelte";
+  import LaunchTip from "$lib/components/LaunchTip.svelte";
 
   let { children } = $props();
 
@@ -14,6 +16,7 @@
   onMount(() => {
     listenForSignIn();
     watchPlaying();
+    listenForLaunchTimes();
   });
 
   const currentTab = $derived(TABS.find((t) => t.path === page.url.pathname));
@@ -30,7 +33,7 @@
 
 <div class="app">
   <Sidebar />
-  <main>
+  <main onwheel={hideLaunchTip}>
     {#if isOff}
       <h1>This tab is turned off</h1>
       <p class="dim">You can turn it back on in Settings.</p>
@@ -39,6 +42,9 @@
     {/if}
   </main>
 </div>
+
+<!-- Launch-time tooltip for Play buttons (only drawn while hovering one) -->
+<LaunchTip />
 
 <style>
   .app {

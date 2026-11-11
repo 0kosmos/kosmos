@@ -7,6 +7,7 @@
   import NewsRow from "$lib/components/NewsRow.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { playing } from "$lib/playing.svelte";
+  import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
 
   // ---------- Installed / updating state (read from Steam's registry entry) ----------
   type AppState = { installed: boolean; updating: boolean; running: boolean };
@@ -188,8 +189,9 @@
 
   async function play() {
     playError = "";
+    hideLaunchTip();
     try {
-      await openUrl(`steam://run/${appid}`);
+      await playAndTime(appid); // starts it through Steam and times how long it takes to appear
     } catch {
       playError = "Couldn't start Steam. Is Steam installed on this PC?";
     }
@@ -241,7 +243,12 @@
           {#if appState && !appState.installed}
             <button class="play" onclick={() => steamLink(`steam://install/${appid}`)}>⬇ Install</button>
           {:else}
-            <button class="play" onclick={play}>▶ Play</button>
+            <button
+              class="play"
+              onclick={play}
+              onpointerenter={(e) => showLaunchTip(appid, e.currentTarget)}
+              onpointerleave={hideLaunchTip}
+            >▶ Play</button>
           {/if}
 
           {#if appState?.installed}

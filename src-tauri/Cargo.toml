@@ -38,4 +38,13 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [target."cfg(windows)".dependencies]
 windows-registry = "0.6"
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Registry"] }
+windows-sys = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_System_Registry",
+  "Win32_Security",                  # needed by CreateFileW (open a drive to ask what it is)
+  "Win32_Storage_FileSystem",        # CreateFileW
+  "Win32_System_IO",                 # DeviceIoControl (SSD / HDD / NVMe query)
+  "Win32_System_SystemInformation",  # total RAM
+  "Win32_System_Threading",          # which program owns a window
+  "Win32_UI_WindowsAndMessaging",    # which window is in front
+] }
