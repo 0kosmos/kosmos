@@ -4,6 +4,7 @@
     toggleTab,
     moveTab,
     setReduceMotion,
+    setLiveStats,
     setTheme,
   } from "$lib/settings.svelte";
   import { TABS } from "$lib/tabs";
@@ -39,6 +40,31 @@
         aria-checked={settings.reduceMotion}
         aria-label="Reduce motion"
         onclick={() => setReduceMotion(!settings.reduceMotion)}
+      >
+        <span class="knob"></span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ---------- Game ---------- -->
+<section>
+  <h2>Game</h2>
+  <div class="group">
+    <div class="row">
+      <div>
+        <strong>Live game stats</strong>
+        <p class="dim">
+          Shows the running game's CPU, GPU and memory use in the sidebar. Only checked every 2
+          seconds while Kosmos is open on screen, never in the background.
+        </p>
+      </div>
+      <button
+        class="switch"
+        role="switch"
+        aria-checked={settings.liveStats}
+        aria-label="Live game stats"
+        onclick={() => setLiveStats(!settings.liveStats)}
       >
         <span class="knob"></span>
       </button>

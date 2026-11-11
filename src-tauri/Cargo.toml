@@ -47,4 +47,7 @@ windows-sys = { version = "0.61", features = [
   "Win32_System_SystemInformation",  # total RAM
   "Win32_System_Threading",          # which program owns a window
   "Win32_UI_WindowsAndMessaging",    # which window is in front
+  "Win32_System_Diagnostics_ToolHelp", # list running programs (live game stats)
+  "Win32_System_ProcessStatus",      # a program's memory use (live game stats)
+  "Win32_System_Performance",        # Windows' GPU counters (live game stats)
 ] }

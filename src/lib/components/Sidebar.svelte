@@ -8,6 +8,14 @@
   import { playing } from "$lib/playing.svelte";
   import { library } from "$lib/library.svelte";
   import { pc, togglePcPanel, loadPcInfo } from "$lib/pcInfo.svelte";
+  import { gameStats, watchGameStats } from "$lib/gameStats.svelte";
+
+  // Live stats: only while the option is on and a game is running (paused when Kosmos is hidden)
+  $effect(() => {
+    watchGameStats(settings.liveStats ? playing.appid : 0);
+  });
+
+  const fmtMb = (mb: number) => (mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : mb + " MB");
   import { setSidebarWidth, clampSidebar, SIDEBAR_MIN, SIDEBAR_MAX } from "$lib/settings.svelte";
 
   // ---------- Resize the sidebar by dragging its right edge ----------
@@ -214,6 +222,19 @@
       <span class="playing-text">
         <span class="label">Currently playing</span>
         <span class="game">{playingName}</span>
+        {#if settings.liveStats}
+          {@const s = gameStats.appid === playing.appid ? gameStats.s : null}
+          {#if s?.found}
+            <span class="stats">
+              <span>CPU</span><b>{s.cpu == null ? "…" : Math.round(s.cpu) + "%"}</b>
+              {#if s.gpu != null}<span>GPU</span><b>{Math.round(s.gpu)}%</b>{/if}
+              <span>RAM</span><b>{fmtMb(s.ramMb)}</b>
+              {#if s.vramMb}<span>VRAM</span><b>{fmtMb(s.vramMb)}</b>{/if}
+            </span>
+          {:else if s}
+            <span class="stats-note">Can't see the game's programs (it may use a separate launcher)</span>
+          {/if}
+        {/if}
       </span>
     </a>
   {/if}
@@ -396,11 +417,12 @@
 
   /* ---------- Currently playing ---------- */
   .playing {
-    gap: 10px; padding: 10px 12px; margin-bottom: 4px;
+    gap: 10px; padding: 10px 12px; margin-bottom: 4px; align-items: flex-start;
     background: var(--surface-2); border: 1px solid var(--border);
   }
   .playing:hover { border-color: var(--good); }
   .live {
+    margin-top: 5px;
     flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--good);
     /* No pulsing animation on purpose: it would keep the app redrawing while you play */
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent);
@@ -408,6 +430,12 @@
   .playing-text { display: flex; flex-direction: column; min-width: 0; }
   .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
   .game { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stats {
+    display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2px 8px; margin-top: 6px;
+    font-size: 0.75rem; color: var(--text-dim);
+  }
+  .stats b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stats-note { margin-top: 4px; font-size: 0.72rem; color: var(--text-dim); white-space: normal; }
 
   .bottom {
     border-top: 1px solid var(--border);

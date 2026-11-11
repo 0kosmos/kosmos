@@ -71,7 +71,7 @@ pub(crate) fn steam_libraries() -> Vec<PathBuf> {
 }
 
 /// Where a game is installed and how big it is, from its appmanifest file.
-fn find_install(appid: u32) -> Option<(PathBuf, u64)> {
+pub(crate) fn find_install(appid: u32) -> Option<(PathBuf, u64)> {
     for lib in steam_libraries() {
         let manifest = lib.join("steamapps").join(format!("appmanifest_{appid}.acf"));
         let Ok(text) = std::fs::read_to_string(&manifest) else { continue };

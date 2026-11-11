@@ -6,6 +6,7 @@ interface Settings {
   order: TabId[];
   enabled: Record<TabId, boolean>;
   reduceMotion: boolean;
+  liveStats: boolean; // live CPU / GPU / RAM of the running game (off by default)
   theme: Theme;
   sidebarWidth: number; // px, dragged with the handle on the sidebar's right edge
 }
@@ -21,7 +22,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), theme: "dark", sidebarWidth: SIDEBAR_MIN };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, theme: "dark", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -59,6 +60,7 @@ function load(): Settings {
         typeof saved.reduceMotion === "boolean" ? saved.reduceMotion : !!saved.performanceMode,
       theme,
       sidebarWidth: clampSidebar(Number(saved.sidebarWidth) || SIDEBAR_MIN),
+      liveStats: !!saved.liveStats,
     };
   } catch {
     return base;
@@ -117,5 +119,9 @@ export function setSidebarWidth(w: number) {
 
 export function setTheme(theme: Theme) {
   settings.theme = theme;
+  save();
+}
+export function setLiveStats(on: boolean) {
+  settings.liveStats = on;
   save();
 }
