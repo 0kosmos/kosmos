@@ -100,6 +100,90 @@ async function getCovers(ids) {
   return covers;
 }
 
+// ---------- Steam sign-in (OpenID 2.0) ----------
+// The app opens /auth/login?state=<random code> in the browser. We send the user to Steam's
+// official login page (Kosmos never sees the password). Steam sends them back to
+// /auth/callback, where we ask Steam to confirm the login is real (check_authentication).
+// Only then do we hand the verified SteamID to the app through a kosmos:// link,
+// together with the app's random code so the app knows the link is the answer to its own request.
+
+const STEAM_OPENID = "https://steamcommunity.com/openid/login";
+const OPENID_NS = "http://specs.openid.net/auth/2.0";
+const STATE_RE = /^[A-Za-z0-9_-]{16,64}$/;
+
+// A small web page shown in the browser during sign-in
+function page(body, status = 200) {
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kosmos sign-in</title>
+<style>
+  :root { --bg:#0a0a0b; --text:#ececef; --dim:#8c8c94; --accent:#7c8cff; --on-accent:#0a0a0b; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f4f6; --text:#16161a; --dim:#62626c; --accent:#5b6cf0; --on-accent:#fff; }
+  }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg);
+         color:var(--text); font-family:system-ui,"Segoe UI",sans-serif; }
+  main { max-width:420px; padding:32px 16px; text-align:center; }
+  h1 { font-size:1.3rem; margin:0 0 8px; }
+  p { color:var(--dim); margin:0 0 20px; line-height:1.5; }
+  a { display:inline-block; padding:10px 18px; border-radius:10px; background:var(--accent);
+      color:var(--on-accent); font-weight:600; text-decoration:none; }
+</style></head>
+<body><main>${body}</main></body></html>`;
+  return new Response(html, {
+    status,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
+
+function failPage() {
+  return page(
+    `<h1>Sign-in didn't work</h1><p>Please go back to Kosmos and try again.</p>`,
+    400
+  );
+}
+
+// Returns the verified SteamID64, or null if anything is wrong
+async function verifySteamLogin(url) {
+  const q = url.searchParams;
+  if (q.get("openid.mode") !== "id_res") return null;
+  if (q.get("openid.op_endpoint") !== STEAM_OPENID) return null;
+
+  // Steam must have sent the user back to exactly this address, with the same code
+  const returnTo = q.get("openid.return_to") || "";
+  if (!returnTo.startsWith(url.origin + "/auth/callback?")) return null;
+  if (new URL(returnTo).searchParams.get("state") !== q.get("state")) return null;
+
+  const claimed = q.get("openid.claimed_id") || "";
+  const m = /^https:\/\/steamcommunity\.com\/openid\/id\/(\d{17})$/.exec(claimed);
+  if (!m || q.get("openid.identity") !== claimed) return null;
+
+  // The important fields must be covered by Steam's signature
+  const signed = (q.get("openid.signed") || "").split(",");
+  for (const f of ["claimed_id", "identity", "return_to", "response_nonce", "op_endpoint"]) {
+    if (!signed.includes(f)) return null;
+  }
+
+  // Ask Steam directly whether this login is genuine
+  const body = new URLSearchParams();
+  for (const [k, v] of q) if (k.startsWith("openid.")) body.set(k, v);
+  body.set("openid.mode", "check_authentication");
+  const res = await fetch(STEAM_OPENID, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const text = await res.text();
+  if (!/^is_valid\s*:\s*true\s*$/m.test(text)) return null;
+
+  return m[1];
+}
+
 // Official API data (games list, profile): safe to save for a few minutes
 async function steam(path, params, env, ttlSeconds) {
   const u = new URL("https://api.steampowered.com" + path);
@@ -115,6 +199,46 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
 
     const url = new URL(request.url);
+
+    // ---------- Sign-in step 1: send the user to Steam's login page ----------
+    if (url.pathname === "/auth/login") {
+      const state = url.searchParams.get("state") || "";
+      if (!STATE_RE.test(state)) return failPage();
+      const p = new URLSearchParams({
+        "openid.ns": OPENID_NS,
+        "openid.mode": "checkid_setup",
+        "openid.return_to": `${url.origin}/auth/callback?state=${state}`,
+        "openid.realm": url.origin + "/",
+        "openid.identity": OPENID_NS + "/identifier_select",
+        "openid.claimed_id": OPENID_NS + "/identifier_select",
+      });
+      return Response.redirect(`${STEAM_OPENID}?${p}`, 302);
+    }
+
+    // ---------- Sign-in step 2: Steam sent the user back; verify and return to the app ----------
+    if (url.pathname === "/auth/callback") {
+      const state = url.searchParams.get("state") || "";
+      if (!STATE_RE.test(state)) return failPage();
+      let steamid = null;
+      try {
+        steamid = await verifySteamLogin(url);
+      } catch {
+        return page(
+          `<h1>Couldn't reach Steam</h1><p>Please go back to Kosmos and try again in a moment.</p>`,
+          502
+        );
+      }
+      if (!steamid) return failPage();
+
+      // steamid is 17 digits and state is letters/digits/-/_ only, so this is safe to put in the page
+      const appLink = `kosmos://auth?steamid=${steamid}&state=${state}`;
+      return page(
+        `<h1>You're signed in</h1>
+         <p>Returning to Kosmos. You can close this tab afterwards.</p>
+         <a href="${appLink}">Open Kosmos</a>
+         <script>location.href = ${JSON.stringify(appLink)};</script>`
+      );
+    }
 
     try {
       // ---------- Cover images for many games (no Steam ID needed) ----------

@@ -4,8 +4,15 @@
   import { settings } from "$lib/settings.svelte";
   import { TABS } from "$lib/tabs";
   import { page } from "$app/state";
+  import { onMount } from "svelte";
+  import { listenForSignIn } from "$lib/auth.svelte";
 
   let { children } = $props();
+
+  // Catch the kosmos:// link the browser opens after Steam sign-in
+  onMount(() => {
+    listenForSignIn();
+  });
 
   const currentTab = $derived(TABS.find((t) => t.path === page.url.pathname));
   const isOff = $derived(currentTab ? !settings.enabled[currentTab.id] : false);
