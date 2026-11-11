@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import { library } from "$lib/library.svelte";
   import { fetchGameInfo, type GameInfo } from "$lib/gameInfo";
 
@@ -10,12 +11,14 @@
   let info = $state<GameInfo | null>(null);
   let status = $state<"loading" | "ready" | "error">("loading");
   let shot = $state(0);
+  let playError = $state("");
 
   $effect(() => {
     const id = appid;
     info = null;
     status = "loading";
     shot = 0;
+    playError = "";
     if (!id) {
       status = "error";
       return;
@@ -47,6 +50,15 @@
     if (history.length > 1) history.back();
     else goto("/");
   }
+
+  async function play() {
+    playError = "";
+    try {
+      await openUrl(`steam://run/${appid}`);
+    } catch {
+      playError = "Couldn't start Steam. Is Steam installed on this PC?";
+    }
+  }
 </script>
 
 <div class="wrap">
@@ -58,6 +70,10 @@
   {:else if status === "error"}
     <h1>{title}</h1>
     <p class="dim">Couldn't load the game details. Check your connection and go back to try again.</p>
+    <div class="actions">
+      <button class="play" onclick={play}>▶ Play</button>
+      {#if playError}<span class="err">{playError}</span>{/if}
+    </div>
   {:else if info}
     <header class="top">
       {#if info.header}
@@ -78,8 +94,9 @@
           <p class="dim">This game has no Steam store page (it may have been removed).</p>
         {/if}
         <div class="actions">
-          <button class="play">▶ Play</button>
+          <button class="play" onclick={play}>▶ Play</button>
           {#if mine}<span class="dim">{mine.hours} h played</span>{/if}
+          {#if playError}<span class="err">{playError}</span>{/if}
         </div>
       </div>
     </header>
@@ -161,6 +178,7 @@
   h1 { margin: 0 0 6px; font-size: 1.8rem; }
   h2 { margin: 0 0 10px; font-size: 1.1rem; }
   .dim { color: var(--text-dim); margin: 0; }
+  .err { color: #ff8a8a; }
   .top { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; }
   .hero { width: 320px; max-width: 100%; border-radius: var(--radius); display: block; }
   .meta { flex: 1; min-width: 260px; }
@@ -169,11 +187,12 @@
     font-size: 0.8rem; padding: 3px 10px; border-radius: 999px;
     background: var(--surface-2); border: 1px solid var(--border);
   }
-  .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; flex-wrap: wrap; }
   .play {
     background: var(--accent); color: #0e0f13; border: none;
     border-radius: var(--radius); padding: 10px 28px; font-weight: 700; font-size: 1rem;
   }
+  .play:hover { filter: brightness(1.1); }
   section { margin-bottom: 28px; }
   .shot { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius); display: block; background: var(--surface); }
   .thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 6px; }

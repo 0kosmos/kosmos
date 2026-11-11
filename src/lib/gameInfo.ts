@@ -27,7 +27,7 @@ export async function fetchGameInfo(appid: number): Promise<GameInfo> {
   const hit = memory.get(appid);
   if (hit) return hit;
 
-  const res = await fetch(`${API_BASE}/game?appid=${appid}`);
+     const res = await fetch(`${API_BASE}/game?appid=${appid}&v=2`);
   if (!res.ok) throw new Error("Request failed");
   const info = (await res.json()) as GameInfo;
 
