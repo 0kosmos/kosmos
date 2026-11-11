@@ -1,20 +1,45 @@
 <script lang="ts">
   import type { Game } from "$lib/library.svelte";
+  import { untrack } from "svelte";
+  import { cachedCover, findCover } from "$lib/covers";
 
   let { game }: { game: Game } = $props();
 
   const CDN = "https://cdn.cloudflare.steamstatic.com/steam/apps";
 
+  // A cover we looked up earlier through the Worker (saved for 7 days).
+  // Read once: each tile always shows the same game (the grid is keyed by appid).
+  let found = $state<string | null>(untrack(() => cachedCover(game.appid) ?? null));
+
   // Images to try, in order. If one fails to load we move to the next.
-  // When all fail, we show the colored letter tile.
-  const sources = $derived([
-    { url: `${CDN}/${game.appid}/library_600x900.jpg`, wide: false }, // tall cover art
-    { url: `${CDN}/${game.appid}/header.jpg`, wide: true },           // wide store header
-    { url: `${CDN}/${game.appid}/capsule_616x353.jpg`, wide: true },  // wide capsule
-  ]);
+  // Wide images are zoomed to fill the tall tile (their left/right edges get cut off).
+  const sources = $derived(
+    found
+      ? [found]
+      : [
+          `${CDN}/${game.appid}/library_600x900.jpg`, // tall cover art
+          `${CDN}/${game.appid}/header.jpg`,          // wide store header
+          `${CDN}/${game.appid}/capsule_616x353.jpg`, // wide capsule
+        ]
+  );
 
   let attempt = $state(0);
   const current = $derived(sources[attempt]);
+
+  // All normal links failed: ask the Worker once for the game's real image address.
+  // If it has none either, the tile shows the game's name.
+  let asked = false;
+  $effect(() => {
+    if (current || found || asked) return;
+    if (cachedCover(game.appid) === null) return; // we already know there's no image
+    asked = true;
+    findCover(game.appid).then((url) => {
+      if (url) {
+        found = url;
+        attempt = 0;
+      }
+    });
+  });
   const hue = $derived((game.appid * 47) % 360);
 </script>
 
@@ -22,15 +47,14 @@
   <div class="cover" style="--hue: {hue}">
     {#if current}
       <img
-        src={current.url}
-        class:wide={current.wide}
+        src={current}
         alt=""
         loading="lazy"
         decoding="async"
         onerror={() => attempt++}
       />
     {:else}
-      <span>{game.name.charAt(0)}</span>
+      <span>{game.name}</span>
     {/if}
   </div>
   <h3 title={game.name}>{game.name}</h3>
@@ -64,22 +88,27 @@
     place-items: center;
     background: linear-gradient(160deg, hsl(var(--hue) 55% 38%), hsl(calc(var(--hue) + 40) 50% 18%));
   }
+  /* Game name on the colored tile when there is no image at all */
   .cover span {
-    font-size: 2.6rem;
+    padding: 12px;
+    font-size: 1.05rem;
     font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
     color: #fff; /* sits on the generated colored tile, same in both themes */
-    opacity: 0.85;
+    opacity: 0.9;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-  }
-  /* Wide images: show the whole image centered on the colored tile instead of cropping it */
-  img.wide {
-    height: auto;
-    object-fit: contain;
   }
   h3 {
     margin: 8px 2px 2px;
