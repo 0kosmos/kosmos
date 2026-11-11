@@ -5,6 +5,7 @@
     moveTab,
     setReduceMotion,
     setLiveStats,
+    setLibrarySource,
     setCloseToTray,
     setTheme,
     setAccent,
@@ -197,6 +198,31 @@
     </div>
   </section>
 {:else if cat === "library"}
+  <section>
+    <h2>Launchers</h2>
+    <p class="dim intro">Which games show in your Library (also in the Library's filter panel). Turning one off only hides its games in Kosmos.</p>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Steam</strong>
+          <p class="dim">All the games on your Steam account, installed or not.</p>
+        </div>
+        <button class="switch" role="switch" aria-checked={settings.librarySteam} aria-label="Show Steam games" onclick={() => setLibrarySource("steam", !settings.librarySteam)}>
+          <span class="knob"></span>
+        </button>
+      </div>
+      <div class="row">
+        <div>
+          <strong>Epic Games</strong>
+          <p class="dim">Your Epic Games library, installed or not. Read from the Epic Games Launcher on this PC, so it updates when the launcher runs.</p>
+        </div>
+        <button class="switch" role="switch" aria-checked={settings.libraryEpic} aria-label="Show Epic Games games" onclick={() => setLibrarySource("epic", !settings.libraryEpic)}>
+          <span class="knob"></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
   <section>
     <h2>Library</h2>
     <div class="group">

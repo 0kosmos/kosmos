@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import GameTile from "$lib/components/GameTile.svelte";
+  import EpicTile from "$lib/components/EpicTile.svelte";
+  import { epic, loadEpic, type EpicGame } from "$lib/epic.svelte";
+  import { settings } from "$lib/settings.svelte";
+  import type { Game } from "$lib/library.svelte";
   import VirtualGrid from "$lib/components/VirtualGrid.svelte";
   import { account } from "$lib/account.svelte";
   import { library, loadLibrary } from "$lib/library.svelte";
@@ -48,27 +52,49 @@
     playing.appid;
     refreshInstalled();
   });
+  // Epic games: read when the Library opens (if they're shown) and when you come back to the window
   $effect(() => {
-    const onFocus = () => refreshInstalled();
+    if (settings.libraryEpic) loadEpic();
+  });
+  $effect(() => {
+    const onFocus = () => {
+      refreshInstalled();
+      if (settings.libraryEpic) loadEpic();
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   });
 
+  // One list for every launcher. Epic doesn't share playtime or tags, so Epic games are left
+  // out of the playtime and tag filters.
+  type Item =
+    | { kind: "steam"; key: string; name: string; hours: number; lastPlayed: number; steam: Game }
+    | { kind: "epic"; key: string; name: string; hours: number; lastPlayed: number; epic: EpicGame };
+  const allItems = $derived<Item[]>([
+    ...(settings.librarySteam
+      ? library.games.map((g) => ({ kind: "steam" as const, key: "s" + g.appid, name: g.name, hours: g.hours, lastPlayed: g.lastPlayed, steam: g }))
+      : []),
+    ...(settings.libraryEpic
+      ? epic.games.map((g) => ({ kind: "epic" as const, key: "e" + g.appName, name: g.name, hours: 0, lastPlayed: 0, epic: g }))
+      : []),
+  ]);
+  const isSteam = (it: Item): it is Extract<Item, { kind: "steam" }> => it.kind === "steam";
+
   const games = $derived.by(() => {
     const q = view.query.trim().toLowerCase();
-    let list = library.games.filter((g) => g.name.toLowerCase().includes(q));
+    let list = allItems.filter((g) => g.name.toLowerCase().includes(q));
 
     // Ticked filters: a game must match all of them
     const now = Date.now();
     for (const s of view.status) {
-      if (s === "installed") list = list.filter((g) => installed.states.has(g.appid));
-      if (s === "notInstalled") list = list.filter((g) => !installed.states.has(g.appid));
-      if (s === "played") list = list.filter((g) => g.hours > 0);
-      if (s === "neverPlayed") list = list.filter((g) => g.hours === 0);
-      if (s === "recent") list = list.filter((g) => g.lastPlayed > now - TWO_WEEKS);
+      if (s === "installed") list = list.filter((g) => (isSteam(g) ? installed.states.has(g.steam.appid) : g.epic.installed));
+      if (s === "notInstalled") list = list.filter((g) => (isSteam(g) ? !installed.states.has(g.steam.appid) : !g.epic.installed));
+      if (s === "played") list = list.filter((g) => isSteam(g) && g.hours > 0);
+      if (s === "neverPlayed") list = list.filter((g) => isSteam(g) && g.hours === 0);
+      if (s === "recent") list = list.filter((g) => isSteam(g) && g.lastPlayed > now - TWO_WEEKS);
     }
     for (const t of view.tags) {
-      list = list.filter((g) => (gameTags.tags[g.appid] ?? []).includes(t));
+      list = list.filter((g) => isSteam(g) && (gameTags.tags[g.steam.appid] ?? []).includes(t));
     }
 
     // For "least played", games you never played go to the end
@@ -169,9 +195,13 @@
               {#if activeFilters}<button class="link" onclick={clearFilters}>Clear filters</button>{/if}
             </p>
           {:else}
-            <VirtualGrid items={games} itemWidth={160} itemHeight={318} key={(g) => g.appid}>
-              {#snippet children(game)}
-                <GameTile {game} />
+            <VirtualGrid items={games} itemWidth={160} itemHeight={318} key={(g) => g.key}>
+              {#snippet children(item)}
+                {#if item.kind === "steam"}
+                  <GameTile game={item.steam} />
+                {:else}
+                  <EpicTile game={item.epic} />
+                {/if}
               {/snippet}
             </VirtualGrid>
           {/if}

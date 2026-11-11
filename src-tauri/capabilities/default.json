@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "opener:default",
@@ -10,16 +12,42 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [
-        { "url": "steam://run/*" },
-        { "url": "steam://install/*" },
-        { "url": "steam://uninstall/*" },
-        { "url": "steam://nav/downloads" },
-        { "url": "steam://openurl/https://store.steampowered.com/recommended/recommendgame/*" },
-        { "url": "steam://openurl/https://store.steampowered.com/app/*" },
-        { "url": "steam://openurl/https://steamcommunity.com/market/listings/*" },
-        { "url": "steam://friends/message/*" },
-        { "url": "steam://openurl/https://steamcommunity.com/profiles/*" },
-        { "url": "steam://openurl/https://steamcommunity.com/groups/*" }
+        {
+          "url": "steam://run/*"
+        },
+        {
+          "url": "steam://install/*"
+        },
+        {
+          "url": "steam://uninstall/*"
+        },
+        {
+          "url": "steam://nav/downloads"
+        },
+        {
+          "url": "steam://openurl/https://store.steampowered.com/recommended/recommendgame/*"
+        },
+        {
+          "url": "steam://openurl/https://store.steampowered.com/app/*"
+        },
+        {
+          "url": "steam://openurl/https://steamcommunity.com/market/listings/*"
+        },
+        {
+          "url": "steam://friends/message/*"
+        },
+        {
+          "url": "steam://openurl/https://steamcommunity.com/profiles/*"
+        },
+        {
+          "url": "steam://openurl/https://steamcommunity.com/groups/*"
+        },
+        {
+          "url": "com.epicgames.launcher://apps/*"
+        },
+        {
+          "url": "com.epicgames.launcher://library"
+        }
       ]
     }
   ]

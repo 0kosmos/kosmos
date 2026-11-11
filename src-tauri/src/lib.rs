@@ -1,5 +1,6 @@
 
 mod downloads;
+mod epic;
 mod launch;
 mod pcinfo;
 mod stats;
@@ -110,6 +111,7 @@ pub fn run() {
             launch::measure_launch,
             downloads::steam_installs,
             downloads::install_states,
+            epic::epic_library,
             pcinfo::pc_info,
             stats::game_stats,
             stats::stop_game_stats,

@@ -3,6 +3,8 @@
   import { gameTags } from "$lib/gameTags.svelte";
   import { view, toggleStatus, toggleTag, clearFilters, type StatusKey } from "$lib/libraryView.svelte";
   import { installed } from "$lib/installed.svelte";
+  import { epic } from "$lib/epic.svelte";
+  import { settings, setLibrarySource } from "$lib/settings.svelte";
 
   // Checkbox filters on the left of the Library (like Steam store filters).
   // A game must match everything that's ticked.
@@ -20,12 +22,20 @@
   const statusCount = $derived.by(() => {
     const now = Date.now();
     const c: Record<StatusKey, number> = { installed: 0, notInstalled: 0, played: 0, neverPlayed: 0, recent: 0 };
-    for (const g of library.games) {
-      if (installed.states.has(g.appid)) c.installed++;
-      else c.notInstalled++;
-      if (g.hours > 0) c.played++;
-      else c.neverPlayed++;
-      if (g.lastPlayed > now - TWO_WEEKS) c.recent++;
+    if (settings.librarySteam) {
+      for (const g of library.games) {
+        if (installed.states.has(g.appid)) c.installed++;
+        else c.notInstalled++;
+        if (g.hours > 0) c.played++;
+        else c.neverPlayed++;
+        if (g.lastPlayed > now - TWO_WEEKS) c.recent++;
+      }
+    }
+    if (settings.libraryEpic) {
+      for (const g of epic.games) {
+        if (g.installed) c.installed++;
+        else c.notInstalled++;
+      }
     }
     return c;
   });
@@ -70,6 +80,19 @@
   </div>
 
   <div class="scroll">
+    <!-- Which launchers' games to show (same switches as in Settings → Library) -->
+    <h3>Launchers</h3>
+    <label class="check">
+      <input type="checkbox" checked={settings.librarySteam} onchange={() => setLibrarySource("steam", !settings.librarySteam)} />
+      <span class="name">Steam</span>
+      <span class="n">{library.games.length}</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" checked={settings.libraryEpic} onchange={() => setLibrarySource("epic", !settings.libraryEpic)} />
+      <span class="name">Epic Games</span>
+      <span class="n">{epic.games.length}</span>
+    </label>
+
     <h3>Status</h3>
     {#each STATUS as s}
       <label class="check">
