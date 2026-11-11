@@ -42,6 +42,10 @@
   const appid = $derived(Number(page.url.searchParams.get("id")));
   const mine = $derived(library.games.find((g) => g.appid === appid));
   const installState = $derived(stateOf(appid));
+  // Owned = in your Steam library, or installed on this PC (e.g. while signed out)
+  const owned = $derived(
+    !!mine || (installState !== "not-installed" && installState !== "unknown")
+  );
 
   // "Running" follows the live signal the sidebar uses, so it disappears as soon as the game closes
   const isRunning = $derived(!!appid && playing.appid === appid);
@@ -189,7 +193,7 @@
 </script>
 
 <div class="wrap">
-  <button class="back" onclick={back}>← Library</button>
+  <button class="back" onclick={back}>← Back</button>
 
   {#if status === "loading"}
     <h1>{title}</h1>
@@ -230,7 +234,39 @@
           <p class="dim">This game has no Steam store page (it may have been removed).</p>
         {/if}
         <div class="actions">
-          {#if installState === "not-installed"}
+          {#if !owned && info.available && (info.price || info.comingSoon)}
+            <!-- Not in your library: price + buy (Steam does the actual purchase) -->
+            {#if info.price}
+              <!-- The price opens the game's store page in the Steam client -->
+              <button
+                class="price-box"
+                onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/app/${appid}/`)}
+                title="Open this game's store page in the Steam client"
+              >
+                {#if info.price.discount}
+                  <span class="pct">-{info.price.discount}%</span>
+                  <span class="old">{info.price.initial}</span>
+                {/if}
+                <span class="now">{info.price.final}</span>
+              </button>
+            {/if}
+            {#if info.price?.free}
+              <button class="play" onclick={() => steamLink(`steam://install/${appid}`)}>⬇ Install</button>
+            {:else if info.price}
+              <button
+                class="play"
+                onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/app/${appid}/`)}
+                title="Opens the game in the Steam client, where you can add it to your cart or wishlist"
+              >🛒 Buy on Steam</button>
+            {:else}
+              <span class="badge-soon">Coming soon</span>
+              <button
+                class="play"
+                onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/app/${appid}/`)}
+                title="Opens the game in the Steam client, where you can wishlist it"
+              >♡ Wishlist on Steam</button>
+            {/if}
+          {:else if installState === "not-installed"}
             <button class="play" onclick={() => steamLink(`steam://install/${appid}`)}>⬇ Install</button>
           {:else if PENDING_LABEL[installState]}
             <button
@@ -257,13 +293,15 @@
             </button>
           {/if}
 
-          <button
-            class="secondary"
-            onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/app/${appid}/`)}
-            title="Opens this game's store page in the Steam client"
-          >
-            Store page ↗
-          </button>
+          {#if owned || !info.available || !(info.price || info.comingSoon)}
+            <button
+              class="secondary"
+              onclick={() => steamLink(`steam://openurl/https://store.steampowered.com/app/${appid}/`)}
+              title="Opens this game's store page in the Steam client"
+            >
+              Store page ↗
+            </button>
+          {/if}
 
           {#if installState === "ready"}
             <button
@@ -505,6 +543,23 @@
   }
   .play { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
   .play:hover { filter: brightness(1.1); }
+  /* Price for games you don't own */
+  .price-box {
+    display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); transition: border-color 0.15s;
+  }
+  .price-box:hover { border-color: var(--text-dim); }
+  .price-box .pct {
+    font-weight: 700; padding: 2px 7px; border-radius: 4px;
+    background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good);
+  }
+  .price-box .old { color: var(--text-dim); text-decoration: line-through; font-size: var(--fs-sm); }
+  .price-box .now { font-weight: 700; font-size: 1.05rem; }
+  .badge-soon {
+    font-size: var(--fs-sm); font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
   .secondary.danger:hover { border-color: var(--bad); color: var(--bad); }
   .play.pending {
     background: color-mix(in srgb, var(--accent) 15%, transparent);

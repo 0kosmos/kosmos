@@ -38,9 +38,14 @@ PHASE 5: MY PC AND WINDOW BEHAVIOR
 2. OPTIONAL live CPU, GPU and RAM usage for the running game, shown inside Kosmos only while its window is visible (pause all polling when it's hidden or minimized). Light polling (about 2 s). Tell me how GPU usage can be read on Windows for NVIDIA, AMD and Intel (vendor-neutral options if possible), and what you're unsure about.
 3. Settings option: "When I press X: close the app, or minimize to the system tray" (default: close). Tray icon with Open and Quit.
 
-PHASE 6: NEWS TAB
-- A "News and updates" area for the user's games. Let the user choose where it sits (left, right or top of the library), with the library able to shrink to make room. Clicking an item opens it in a centered popup (modal) over a dimmed and slightly blurred app background. Keep it light, and no blur when reduce motion is on.
+PHASE 6: LIBRARY FILTERS (CHANGED: the news panel was dropped)
+- A filter panel on the left of the Library (like Steam store filters): checkboxes for status (Installed locally, Not installed, Played, Never played, Played in last 2 weeks) and Steam tags shared by 2+ of your games (Horror, Multiplayer, FPS...). A game must match everything ticked. Tags fetched 50 games per request, cached 7 days. Panel can be hidden; overlays the games in narrow windows.
+- (dropped) A "News and updates" area for the user's games. Let the user choose where it sits (left, right or top of the library), with the library able to shrink to make room. Clicking an item opens it in a centered popup (modal) over a dimmed and slightly blurred app background. Keep it light, and no blur when reduce motion is on.
 
-LATER (not now): Store, Friends, Community and Workshop pages.
+STORE [done]: Store tab with best deals (25%+ off, 80%+ reviews), search, filters (price meter, discounted only, free only, min reviews, up to 5 categories), sort, load more. Game page shows price + Buy on Steam for games you don't own (purchase happens in the Steam client).
+
+MARKET [done]: Community Market tab: games (CS2, Dota 2, TF2, Rust, Steam items, PUBG...), each game's own categories (CS2: type, weapon, exterior, quality...), price range, sort, search, item details with Steam's exact prices, "Buy on Steam Market" (opens in the Steam client). Steam allows 10 items per request without login, so the Worker combines 3 pages per load and caches.
+
+LATER (not now): Friends, Community and Workshop pages.
 
 Start with Phase 1, step 1 (the theme system), since everything else depends on it. After each step, tell me exactly how to test it and when to commit and push.

@@ -21,6 +21,8 @@
 
   --hover: rgba(255, 255, 255, 0.05); /* faint highlight behind hovered items */
   --scrim: rgba(0, 0, 0, 0.6); /* dimmed background behind popups */
+  /* Arrow inside dropdowns (same grey as dim text) */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%238c8c94' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   /* Shared sizes, so every page uses the same corners and type */
   --radius: 10px;    /* cards, tiles, inputs, buttons */
@@ -46,6 +48,7 @@
   --knob: #ffffff;
   --hover: rgba(0, 0, 0, 0.04);
   --scrim: rgba(20, 20, 26, 0.45);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2362626c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme: light;
 }
 
@@ -90,6 +93,22 @@ select {
   font: inherit;
   font-size: var(--fs-md);
   transition: border-color 0.15s;
+}
+/* Dropdowns: our own arrow, a bit away from the right edge (Windows' built-in arrow sits
+   right against the border). !important so pages that set their own padding keep the room. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
+  padding-right: 34px !important;
+  cursor: pointer;
+}
+select option {
+  background: var(--surface);
+  color: var(--text);
 }
 input:hover,
 select:hover {

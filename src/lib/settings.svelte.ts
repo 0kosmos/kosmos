@@ -1,11 +1,15 @@
 import { TABS, type TabId } from "./tabs";
 
 export type Theme = "dark" | "light";
+export type StorePlatform = "any" | "windows" | "mac" | "linux" | "deck";
 
 interface Settings {
   order: TabId[];
   enabled: Record<TabId, boolean>;
   reduceMotion: boolean;
+  storeRegion: string; // "" = automatic (where you are), or a 2-letter country code (sets the currency)
+  storeExclude: number[]; // Steam mature-content descriptors to hide in the store (1-5)
+  storePlatform: StorePlatform; // only show store games that run on this
   closeToTray: boolean; // X minimizes to the system tray instead of quitting (off by default)
   liveStats: boolean; // live CPU / GPU / RAM of the running game (off by default)
   theme: Theme;
@@ -23,7 +27,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, theme: "dark", sidebarWidth: SIDEBAR_MIN };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -63,6 +67,9 @@ function load(): Settings {
       sidebarWidth: clampSidebar(Number(saved.sidebarWidth) || SIDEBAR_MIN),
       liveStats: !!saved.liveStats,
       closeToTray: !!saved.closeToTray,
+      storeRegion: typeof saved.storeRegion === "string" && /^([A-Z]{2})?$/.test(saved.storeRegion) ? saved.storeRegion : "",
+      storeExclude: Array.isArray(saved.storeExclude) ? saved.storeExclude.filter((n: number) => n >= 1 && n <= 5) : [3, 4],
+      storePlatform: (["any", "windows", "mac", "linux", "deck"] as const).includes(saved.storePlatform) ? saved.storePlatform : "any",
     };
   } catch {
     return base;
@@ -130,5 +137,22 @@ export function setLiveStats(on: boolean) {
 
 export function setCloseToTray(on: boolean) {
   settings.closeToTray = on;
+  save();
+}
+
+export function setStoreRegion(cc: string) {
+  settings.storeRegion = cc;
+  save();
+}
+
+export function toggleStoreExclude(id: number) {
+  settings.storeExclude = settings.storeExclude.includes(id)
+    ? settings.storeExclude.filter((x) => x !== id)
+    : [...settings.storeExclude, id];
+  save();
+}
+
+export function setStorePlatform(p: StorePlatform) {
+  settings.storePlatform = p;
   save();
 }

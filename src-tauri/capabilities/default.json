@@ -15,7 +15,8 @@
         { "url": "steam://uninstall/*" },
         { "url": "steam://nav/downloads" },
         { "url": "steam://openurl/https://store.steampowered.com/recommended/recommendgame/*" },
-        { "url": "steam://openurl/https://store.steampowered.com/app/*" }
+        { "url": "steam://openurl/https://store.steampowered.com/app/*" },
+        { "url": "steam://openurl/https://steamcommunity.com/market/listings/*" }
       ]
     }
   ]

@@ -1,4 +1,5 @@
 import { API_BASE } from "./config";
+import { settings } from "./settings.svelte";
 
 export interface GameInfo {
   available: boolean;
@@ -10,6 +11,8 @@ export interface GameInfo {
   releaseDate?: string;
   genres?: string[];
   tags?: string[]; // user-voted store tags, most popular first
+  price?: { free: boolean; final: string; initial: string; discount: number } | null;
+  comingSoon?: boolean;
   header?: string;
   screenshots?: { thumb: string; full: string }[];
   requirements?: { minimum: string; recommended: string };
@@ -94,18 +97,38 @@ export async function fetchReviews(appid: number, cursor = "*"): Promise<ReviewP
 }
 
 // Small in-memory copy so reopening a game is instant
-const memory = new Map<number, GameInfo>();
+const memory = new Map<string, GameInfo>();
 
 export async function fetchGameInfo(appid: number): Promise<GameInfo> {
-  const hit = memory.get(appid);
+  // The store region (Settings → Store) decides the price's currency
+  const cc = settings.storeRegion;
+  const key = appid + ":" + cc;
+  const hit = memory.get(key);
   if (hit) return hit;
 
-     const res = await fetch(`${API_BASE}/game?appid=${appid}&v=4`);
   // ("v" changes whenever the Worker starts sending new fields, so old cached answers aren't reused)
+  const res = await fetch(`${API_BASE}/game?appid=${appid}&v=5${cc ? "&cc=" + cc : ""}`);
   if (!res.ok) throw new Error("Request failed");
   const info = (await res.json()) as GameInfo;
 
   if (memory.size > 30) memory.delete(memory.keys().next().value!);
-  memory.set(appid, info);
+  memory.set(key, info);
   return info;
+}
+
+// ---------- News feed for the Library's "News and updates" row ----------
+// Latest posts of several games in one request (no full text; that loads when a post is opened).
+export type FeedItem = { id: string; title: string; date: number; url: string; image: string; appid: number };
+
+let feedCache: { key: string; items: FeedItem[]; at: number } | null = null;
+const FEED_TTL = 30 * 60 * 1000;
+
+export async function fetchFeed(appids: number[]): Promise<FeedItem[]> {
+  const key = appids.join(",");
+  if (feedCache && feedCache.key === key && Date.now() - feedCache.at < FEED_TTL) return feedCache.items;
+  const res = await fetch(`${API_BASE}/feed?appids=${key}`);
+  if (!res.ok) throw new Error("Request failed");
+  const items = ((await res.json()).items ?? []) as FeedItem[];
+  feedCache = { key, items, at: Date.now() };
+  return items;
 }
