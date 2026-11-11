@@ -9,6 +9,12 @@
   import { watchPlaying } from "$lib/playing.svelte";
   import { listenForLaunchTimes, hideLaunchTip } from "$lib/launchTime.svelte";
   import LaunchTip from "$lib/components/LaunchTip.svelte";
+  import { invoke } from "@tauri-apps/api/core";
+
+  // Tell the Rust side what X should do (and show/hide the tray icon) at start and on change
+  $effect(() => {
+    invoke("set_close_to_tray", { on: settings.closeToTray }).catch(() => {});
+  });
 
   let { children } = $props();
 
@@ -53,7 +59,9 @@
 <style>
   .app {
     display: grid;
-    grid-template-columns: var(--sidebar-w) 1fr;
+    /* The sidebar gets narrower in small windows so the library always fits 3 games
+       (590 px = 64 px padding + 3 game columns of 508 px + room for the scrollbar) */
+    grid-template-columns: max(220px, min(var(--sidebar-w), calc(100vw - 590px))) 1fr;
     height: 100vh;
   }
   main {

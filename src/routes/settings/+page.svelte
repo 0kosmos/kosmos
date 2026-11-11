@@ -5,6 +5,7 @@
     moveTab,
     setReduceMotion,
     setLiveStats,
+    setCloseToTray,
     setTheme,
   } from "$lib/settings.svelte";
   import { TABS } from "$lib/tabs";
@@ -106,10 +107,16 @@
   <div class="group">
     <div class="row">
       <div>
-        <strong>When I close the window</strong>
-        <p class="dim">Choosing between closing the app and minimizing to the system tray comes in a later update.</p>
+        <strong>When I press X</strong>
+        <p class="dim">
+          "Minimize to tray" keeps Kosmos running as an icon next to the clock. Click it to open
+          Kosmos again, or right-click it to quit.
+        </p>
       </div>
-      <span class="badge">Close app</span>
+      <div class="segmented" role="radiogroup" aria-label="When I press X">
+        <button role="radio" aria-checked={!settings.closeToTray} onclick={() => setCloseToTray(false)}>Close the app</button>
+        <button role="radio" aria-checked={settings.closeToTray} onclick={() => setCloseToTray(true)}>Minimize to tray</button>
+      </div>
     </div>
   </div>
 </section>
@@ -174,10 +181,4 @@
   }
   .segmented button:hover { color: var(--text); }
   .segmented button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); }
-
-  .badge {
-    flex-shrink: 0; padding: 4px 10px; border-radius: var(--radius-sm);
-    background: var(--surface-2); border: 1px solid var(--border);
-    color: var(--text-dim); font-size: var(--fs-sm);
-  }
 </style>

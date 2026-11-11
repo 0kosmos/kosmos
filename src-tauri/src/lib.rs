@@ -1,9 +1,9 @@
-use tauri::Manager;
 
 mod downloads;
 mod launch;
 mod pcinfo;
 mod stats;
+mod tray;
 
 // ---------- Currently playing ----------
 // Steam writes the running game's ID to HKCU\Software\Valve\Steam\RunningAppID (0 = none).
@@ -96,11 +96,7 @@ pub fn run() {
     #[cfg(desktop)]
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            tray::show_main(app); // also brings it back from the tray
         }));
     }
 
@@ -116,8 +112,10 @@ pub fn run() {
             downloads::install_states,
             pcinfo::pc_info,
             stats::game_stats,
-            stats::stop_game_stats
+            stats::stop_game_stats,
+            tray::set_close_to_tray
         ])
+        .on_window_event(tray::on_window_event)
         .setup(|_app| {
             // Watch for the game Steam is running (for "Currently playing" in the sidebar)
             #[cfg(windows)]

@@ -54,6 +54,8 @@
   .scroller {
     height: 100%;
     overflow-y: auto;
+    /* A little room at the top so tiles lifting on hover aren't cut off */
+    padding-top: 6px;
   }
   .spacer {
     position: relative;

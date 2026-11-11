@@ -7,14 +7,14 @@
 
 :root {
   /* Black theme (default) */
-  --bg: #0a0a0b;
-  --surface: #121214;
-  --surface-2: #1a1a1d;
-  --border: #26262a;
+  --bg: #000000;        /* true black page background */
+  --surface: #0b0b0c;   /* cards, sidebar */
+  --surface-2: #141416; /* raised parts inside cards */
+  --border: #1f1f23;
   --text: #ececef;
   --text-dim: #8c8c94;
   --accent: #7c8cff;
-  --on-accent: #0a0a0b; /* text drawn on top of the accent color */
+  --on-accent: #000000; /* text drawn on top of the accent color */
   --good: #7fd69a;
   --bad: #ff8a8a;
   --knob: #ffffff; /* the dot inside on/off switches */
