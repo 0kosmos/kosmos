@@ -4,23 +4,48 @@
   import VirtualGrid from "$lib/components/VirtualGrid.svelte";
   import { account, setSteamId } from "$lib/account.svelte";
   import { library, loadLibrary, disconnect } from "$lib/library.svelte";
+  import { view, saveView } from "$lib/libraryView.svelte";
 
-  let query = $state("");
-  let sort = $state("name");
   let input = $state("");
   let inputError = $state("");
 
   const games = $derived.by(() => {
-    const q = query.trim().toLowerCase();
-    const list = library.games.filter((g) => g.name.toLowerCase().includes(q));
-    if (sort === "name") list.sort((a, b) => a.name.localeCompare(b.name));
-    if (sort === "hours") list.sort((a, b) => b.hours - a.hours);
-    if (sort === "recent") list.sort((a, b) => b.lastPlayed - a.lastPlayed);
+    const q = view.query.trim().toLowerCase();
+    let list = library.games.filter((g) => g.name.toLowerCase().includes(q));
+
+    if (view.filter === "played") list = list.filter((g) => g.hours > 0);
+    if (view.filter === "unplayed") list = list.filter((g) => g.hours === 0);
+
+    // For "least played", games you never played go to the end
+    const key = (h: number) => (h === 0 ? Number.MAX_SAFE_INTEGER : h);
+
+    switch (view.sort) {
+      case "name":
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name-desc":
+        list.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "hours":
+        list.sort((a, b) => b.hours - a.hours);
+        break;
+      case "hours-asc":
+        list.sort((a, b) => key(a.hours) - key(b.hours));
+        break;
+      case "recent":
+        list.sort((a, b) => b.lastPlayed - a.lastPlayed);
+        break;
+    }
     return list;
   });
 
+  // Remember sort and filter for next time the app opens
+  $effect(() => saveView(view.sort, view.filter));
+
   onMount(() => {
-    loadLibrary();
+    // Only refresh from Steam if our copy is older than 5 minutes
+    const fresh = library.status === "ready" && Date.now() - library.updatedAt < 5 * 60 * 1000;
+    if (!fresh) loadLibrary();
   });
 
   function connect() {
@@ -51,12 +76,22 @@
     <h1>Library <span class="count">{games.length} games</span></h1>
 
     <div class="bar">
-      <input type="search" placeholder="Search games..." bind:value={query} />
-      <select bind:value={sort} aria-label="Sort by">
-        <option value="name">Name</option>
+      <input type="search" placeholder="Search games..." bind:value={view.query} />
+
+      <select bind:value={view.sort} aria-label="Sort by">
+        <option value="name">Name (A–Z)</option>
+        <option value="name-desc">Name (Z–A)</option>
         <option value="hours">Most played</option>
+        <option value="hours-asc">Least played</option>
         <option value="recent">Recently played</option>
       </select>
+
+      <select bind:value={view.filter} aria-label="Show">
+        <option value="all">All games</option>
+        <option value="played">Played</option>
+        <option value="unplayed">Never played</option>
+      </select>
+
       <button class="ghost" onclick={disconnect}>Disconnect</button>
     </div>
 
@@ -100,7 +135,7 @@
   h1 { margin: 0 0 16px; font-size: 1.6rem; }
   h2 { margin: 0 0 8px; font-size: 1.2rem; }
   .count { font-size: 0.9rem; font-weight: 400; color: var(--text-dim); margin-left: 8px; }
-  .bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+  .bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
   input, select {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -109,7 +144,7 @@
     padding: 8px 12px;
     font: inherit;
   }
-  input[type="search"] { flex: 1; max-width: 320px; }
+  input[type="search"] { flex: 1; max-width: 320px; min-width: 160px; }
   .dim { color: var(--text-dim); }
   .err { color: #ff8a8a; margin: 8px 0 0; }
   .grid-wrap { flex: 1; min-height: 0; }

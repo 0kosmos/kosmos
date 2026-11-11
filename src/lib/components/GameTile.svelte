@@ -10,7 +10,7 @@
   );
 </script>
 
-<article class="tile">
+<a class="tile" href={"/game?id=" + game.appid}>
   <div class="cover" style="--hue: {hue}">
     {#if failed}
       <span>{game.name.charAt(0)}</span>
@@ -20,10 +20,11 @@
   </div>
   <h3 title={game.name}>{game.name}</h3>
   <p>{game.hours} h played</p>
-</article>
+</a>
 
 <style>
   .tile {
+    display: block;
     width: 160px;
     height: 290px;
     overflow: hidden;
@@ -31,6 +32,13 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 8px;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tile:hover {
+    border-color: var(--accent);
+    background: var(--surface-2);
   }
   .cover {
     aspect-ratio: 2 / 3;
