@@ -5,7 +5,8 @@ export type TabId =
   | "store"
   | "friends"
   | "groups"
-  | "screenshots";
+  | "screenshots"
+  | "inventory";
 
 export interface Tab {
   id: TabId;
@@ -20,6 +21,7 @@ export const TABS: Tab[] = [
   { id: "market", label: "Market", path: "/market", icon: "M4 9l1.5-5h13L20 9 M4 9h16v11H4z M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0 M10 20v-5h4v5" },
   { id: "store", label: "Store", path: "/store", icon: "M6 7h12l1 13H5L6 7z M9 7a3 3 0 0 1 6 0" },
   { id: "friends", label: "Friends", path: "/friends", icon: "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6 M17 11a2.5 2.5 0 1 0 0-5 M17 14c2.2 0 4 1.8 4 4" },
+  { id: "inventory", label: "Inventory", path: "/inventory", icon: "M4 8l8-4 8 4v8l-8 4-8-4z M4 8l8 4 8-4 M12 12v8" },
   { id: "screenshots", label: "Screenshots", path: "/screenshots", icon: "M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" },
   { id: "groups", label: "Groups", path: "/groups", icon: "M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M2 20c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5 M12.5 15c1-.3 2.2-.5 3.5-.5 3.3 0 6 2.5 6 5.5" },
 ];

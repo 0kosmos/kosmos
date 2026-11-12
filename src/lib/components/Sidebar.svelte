@@ -21,25 +21,28 @@
   import { epic, loadEpic } from "$lib/epic.svelte";
 
   // ---------- Dot on "Downloads": updates waiting or downloads going (Steam + Epic) ----------
-  // Checked at startup and when you come back to the window (at most once a minute)
-  onMount(() => {
+  // Checked at startup and when you come back to the window (at most once a minute), and the
+  // moment Steam or Epic change their install files (Windows tells the Rust side, which tells
+  // us). Nothing is checked on a timer. When the Downloads tab is hidden, none of this runs.
+  $effect(() => {
+    if (!settings.enabled.downloads) return;
     const check = () => {
       refreshDownloadsBadge();
       loadEpic();
     };
     check();
     window.addEventListener("focus", check);
-    return () => window.removeEventListener("focus", check);
+    const stop = onInstallsChanged(() => refreshDownloadsBadge(true), () => loadEpic(true));
+    return () => {
+      window.removeEventListener("focus", check);
+      stop();
+    };
   });
   // Epic's list changed (read by the sidebar, Library or Downloads): update the dot
   $effect(() => {
     const games = epic.games;
     if (epic.loaded) untrack(() => noteEpic(games));
   });
-  // The moment Steam or Epic change their install files (download started, finished, update
-  // needed), Windows tells the Rust side, which tells us: update the dot right away.
-  // Nothing is checked on a timer.
-  $effect(() => onInstallsChanged(() => refreshDownloadsBadge(true), () => loadEpic(true)));
   const dot = $derived(badgeKind());
   const DOT_TITLE = { update: "Updates waiting", install: "Installing", done: "Download finished" };
 
@@ -262,7 +265,8 @@
     {/each}
 
     {#if hiddenCount}
-      <a class="hidden-link" href={SETTINGS_TAB.path}>
+      <!-- Opens Settings on General, where the tab list is -->
+      <a class="hidden-link" href={SETTINGS_TAB.path + "?cat=general"}>
         {hiddenCount} hidden {hiddenCount === 1 ? "tab" : "tabs"}
       </a>
     {/if}

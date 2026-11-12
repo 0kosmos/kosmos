@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { untrack } from "svelte";
+  import { page } from "$app/state";
   import { openWelcome } from "$lib/welcome.svelte";
   import {
     settings,
@@ -45,6 +47,12 @@
       }
     })()
   );
+  // A link can open a category directly: /settings?cat=general (also when already on Settings)
+  $effect(() => {
+    const wanted = page.url.searchParams.get("cat");
+    if (CATEGORIES.some((c) => c.id === wanted)) untrack(() => choose(wanted as CatId));
+  });
+
   function choose(id: CatId) {
     cat = id;
     try {

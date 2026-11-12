@@ -4,6 +4,7 @@ mod custom;
 mod downloads;
 mod epic;
 mod launch;
+mod memory;
 mod pcinfo;
 mod screenshots;
 mod stats;
@@ -122,6 +123,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             running_app,
             appstats::app_usage,
+            memory::page_memory,
             custom::custom_file_info,
             custom::custom_cover_save,
             custom::custom_cover_delete,

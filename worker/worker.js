@@ -545,17 +545,154 @@ async function marketSearch(q) {
 }
 
 // One item's exact prices in your currency: lowest listing, median sale price, sales in 24 h
-async function marketItem(appid, hash, currency) {
+async function marketItem(appid, hash, currency, ttl = 900) {
   const u = new URL(`${MARKET}/priceoverview/`);
   u.searchParams.set("appid", appid);
   u.searchParams.set("market_hash_name", hash);
   u.searchParams.set("currency", String(STEAM_CURRENCY[currency] || 1));
-  const d = await marketJson(u.toString(), 900);
+  const d = await marketJson(u.toString(), ttl);
   return {
     lowest: d.lowest_price || "",
     median: d.median_price || "",
     volume: d.volume || "",
   };
+}
+
+// ---------- Inventory ----------
+// Which games you have items in: your profile's inventory page lists them (with how many
+// items) in a small piece of data called g_rgAppContextData. An empty list there plus the word
+// "private" means the inventory is private.
+// fresh = ask Steam right now (after you change your privacy settings), skipping saved copies
+async function inventoryGames(steamid, fresh = false) {
+  const res = await fetch(`${COMMUNITY}/profiles/${steamid}/inventory/${fresh ? "?_=" + Date.now() : ""}`, {
+    headers: MARKET_HEADERS,
+    cf: fresh ? { cacheTtl: 0 } : { cacheTtl: 60, cacheEverything: true },
+  });
+  if (!res.ok) throw new Error("Community answered " + res.status);
+  const html = await res.text();
+  // Steam answers with an empty page when it gets too many questions: try again later
+  if (html.length < 2000) return { busy: true, private: false, games: [] };
+  const m = /g_rgAppContextData = (\{.*?\});/s.exec(html);
+  if (!m) {
+    if (/profile_private_info|inventory is (?:currently )?private|This profile is private/i.test(html) || /g_rgAppContextData = \[\]/.test(html)) {
+      return { private: true, games: [] };
+    }
+    return { private: false, games: [] };
+  }
+  const data = JSON.parse(m[1]);
+  const games = Object.values(data)
+    .map((a) => {
+      const contexts = Object.values(a.rgContexts || {}).filter((c) => Number(c.asset_count) > 0);
+      return {
+        appid: Number(a.appid),
+        name: String(a.name || ""),
+        icon: /^https:\/\//.test(a.icon || "") ? a.icon : "",
+        count: Number(a.asset_count) || 0,
+        contexts: contexts.map((c) => ({ id: String(c.id), name: String(c.name || ""), count: Number(c.asset_count) || 0 })),
+      };
+    })
+    .filter((g) => g.count > 0 && g.contexts.length)
+    .sort((a, b) => b.count - a.count);
+  return { private: false, games };
+}
+
+// One game's items. First Steam's official Web API (generous limits, uses the key), and if that
+// doesn't work, the public inventory address the Steam website uses (strict limits).
+// Identical items (cases, stickers...) are grouped with an amount.
+async function inventoryItems(steamid, appid, context, env, fresh = false) {
+  const bust = fresh ? "&_=" + Date.now() : "";
+  const cache = fresh ? { cacheTtl: 0 } : { cacheTtl: 120, cacheEverything: true };
+  let raw = null;
+  let isPrivate = false;
+  try {
+    const u = new URL("https://api.steampowered.com/IEconService/GetInventoryItemsWithDescriptions/v1/");
+    u.searchParams.set("key", env.STEAM_API_KEY);
+    u.searchParams.set("steamid", steamid);
+    u.searchParams.set("appid", appid);
+    u.searchParams.set("contextid", context);
+    u.searchParams.set("get_descriptions", "true");
+    u.searchParams.set("language", "english");
+    u.searchParams.set("count", "2000");
+    if (fresh) u.searchParams.set("_", String(Date.now()));
+    const res = await fetch(u, { cf: cache });
+    if (res.status === 403) isPrivate = true;
+    else if (res.ok) {
+      const r = (await res.json()).response || {};
+      if (Array.isArray(r.assets)) raw = r;
+    }
+  } catch {
+    /* try the website's address below */
+  }
+  if (!raw && !isPrivate) {
+    const res = await fetch(`${COMMUNITY}/inventory/${steamid}/${appid}/${context}?l=english&count=2000${bust}`, {
+      headers: MARKET_HEADERS,
+      cf: cache,
+    });
+    if (res.status === 403) isPrivate = true;
+    else if (res.status === 429) return { busy: true, items: [] };
+    else if (res.ok) raw = await res.json();
+    else throw new Error("Inventory answered " + res.status);
+  }
+  if (isPrivate) return { private: true, items: [] };
+  if (!raw || !Array.isArray(raw.assets)) return { private: false, items: [] };
+
+  const desc = {};
+  for (const d of raw.descriptions || []) desc[d.classid + "_" + d.instanceid] = d;
+  const groups = new Map();
+  for (const a of raw.assets) {
+    const d = desc[a.classid + "_" + a.instanceid];
+    if (!d) continue;
+    const key = a.classid + "_" + a.instanceid;
+    const g = groups.get(key);
+    if (g) {
+      g.amount += Number(a.amount) || 1;
+      continue;
+    }
+    groups.set(key, {
+      id: key,
+      name: String(d.market_name || d.name || ""),
+      hash: String(d.market_hash_name || ""),
+      type: String(d.type || ""),
+      color: /^[0-9a-f]{6}$/i.test(d.name_color || "") ? d.name_color : "",
+      icon: d.icon_url ? ECON_IMG + d.icon_url + "/256fx256f" : "",
+      amount: Number(a.amount) || 1,
+      marketable: !!d.marketable,
+      tradable: !!d.tradable,
+    });
+  }
+  return { private: false, items: [...groups.values()], total: Number(raw.total_inventory_count) || groups.size };
+}
+
+// Turn a Steam price text into a number: "1,23€", "$4.56", "1 234,50 zł", "¥ 1,234"...
+function moneyValue(text) {
+  const s = String(text || "").replace(/[^\d.,]/g, "");
+  if (!s) return null;
+  const lastSep = Math.max(s.lastIndexOf(","), s.lastIndexOf("."));
+  // A separator followed by exactly 1-2 digits at the end is the decimal point
+  if (lastSep >= 0 && s.length - lastSep - 1 <= 2) {
+    return Number(s.slice(0, lastSep).replace(/[.,]/g, "") + "." + s.slice(lastSep + 1));
+  }
+  return Number(s.replace(/[.,]/g, ""));
+}
+
+// Community Market prices for up to 10 items, in your currency (kept for 6 hours each).
+// Steam only allows a few price questions per minute, so the app asks in small batches.
+async function inventoryPrices(appid, names, currency) {
+  const prices = {};
+  let busy = false;
+  for (const name of names) {
+    try {
+      const p = await marketItem(appid, name, currency, 21600);
+      prices[name] = { lowest: p.lowest, median: p.median, value: moneyValue(p.lowest || p.median) };
+    } catch (e) {
+      if (e.busy) {
+        busy = true;
+        break;
+      }
+      prices[name] = { lowest: "", median: "", value: null };
+    }
+  }
+  return { prices, busy, currency };
 }
 
 // ---------- Steam groups ----------
@@ -1177,6 +1314,12 @@ export default {
             };
             return json(await marketSearch(q), 200, 600);
           }
+          if (url.pathname === "/market/prices") {
+            // ?appid=730&names=Name1|Name2 (up to 10)
+            const names = (p.get("names") || "").split("|").map((s) => s.trim()).filter((s) => s && s.length <= 200).slice(0, 10);
+            if (!appid || !names.length) return json({ error: "Please add ?appid=&names=" }, 400);
+            return json(await inventoryPrices(appid, names, currency), 200, 3600);
+          }
           if (url.pathname === "/market/item") {
             const hash = (p.get("name") || "").slice(0, 200);
             if (!appid || !hash) return json({ error: "Please add ?appid=&name=" }, 400);
@@ -1397,6 +1540,21 @@ export default {
         const infos = await Promise.all(ids.map((id) => groupInfo("gid/" + id).catch(() => null)));
         const groups = infos.filter(Boolean).sort((a, b) => b.members - a.members);
         return json({ private: false, groups }, 200, 3600);
+      }
+
+      // ---------- Inventory ----------
+      // "Private" and "busy" answers are never kept, so a change on Steam shows right away
+      const fresh = url.searchParams.get("fresh") === "1";
+      if (url.pathname === "/inventory/games") {
+        const r = await inventoryGames(steamid, fresh);
+        return json(r, 200, r.private || r.busy ? 0 : 60);
+      }
+      if (url.pathname === "/inventory/items") {
+        const appid = url.searchParams.get("appid") || "";
+        const context = url.searchParams.get("context") || "2";
+        if (!/^\d{1,9}$/.test(appid) || !/^\d{1,20}$/.test(context)) return json({ error: "Please add ?appid=&context=" }, 400);
+        const r = await inventoryItems(steamid, appid, context, env, fresh);
+        return json(r, 200, r.private || r.busy ? 0 : 120);
       }
 
       if (url.pathname === "/games") {

@@ -41,6 +41,10 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [target."cfg(windows)".dependencies]
 windows-registry = "0.6"
+# Talk to the page engine (WebView2): ask it to use less memory while Kosmos is hidden.
+# Same versions Tauri already uses, so nothing extra is downloaded or built.
+webview2-com = "0.39"
+windows-core = "0.62"
 windows-sys = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_System_Registry",

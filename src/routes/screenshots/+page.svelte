@@ -18,6 +18,32 @@
   let order = $state<"new" | "old">("new");
   let onlyOnline = $state(false); // tick: only screenshots you uploaded to your Steam profile
 
+  // Picture size, like File Explorer's views. At full screen: Small 8, Medium 5, Large 3 per row
+  // (fewer in smaller windows). Large uses the full pictures, the others Steam's small versions.
+  const SIZES = { small: 166, medium: 274, large: 460 } as const;
+  type Size = keyof typeof SIZES;
+  const SIZE_KEY = "kosmos-screenshot-size";
+  let size = $state<Size>(
+    (() => {
+      try {
+        const v = localStorage.getItem(SIZE_KEY);
+        return v === "small" || v === "large" ? v : "medium";
+      } catch {
+        return "medium";
+      }
+    })()
+  );
+  function setSize(s: Size) {
+    size = s;
+    try {
+      localStorage.setItem(SIZE_KEY, s);
+    } catch {
+      /* ignore */
+    }
+  }
+  const tileW = $derived<number>(SIZES[size]);
+  const tileH = $derived(Math.round((tileW * 9) / 16));
+
   async function load() {
     try {
       shots = await invoke<Shot[]>("steam_screenshots", { steamid: account.steamid });
@@ -120,6 +146,11 @@
       <option value="new">Newest first</option>
       <option value="old">Oldest first</option>
     </select>
+    <div class="sizes" role="radiogroup" aria-label="Picture size">
+      {#each ["small", "medium", "large"] as const as s (s)}
+        <button role="radio" aria-checked={size === s} onclick={() => setSize(s)}>{s[0].toUpperCase() + s.slice(1)}</button>
+      {/each}
+    </div>
     <label class="check" title="Only screenshots you uploaded to your Steam profile">
       <input type="checkbox" bind:checked={onlyOnline} />
       On Steam only <span class="n">{onlineCount}</span>
@@ -135,10 +166,16 @@
     </p>
   {:else}
     <div class="grid-wrap">
-      <VirtualGrid items={shown} itemWidth={240} itemHeight={135} gap={10} key={(s) => s.path}>
+      <VirtualGrid items={shown} itemWidth={tileW} itemHeight={tileH} gap={10} key={(s) => s.path}>
         {#snippet children(s)}
-          <button class="shot" onclick={() => (open = shown.indexOf(s))} title={nameOf(s.appid) + " · " + day(s.taken)}>
-            <img src={convertFileSrc(s.thumb || s.path)} alt="" loading="lazy" decoding="async" />
+          <button
+            class="shot"
+            style:width="{tileW}px"
+            style:height="{tileH}px"
+            onclick={() => (open = shown.indexOf(s))}
+            title={nameOf(s.appid) + " · " + day(s.taken)}
+          >
+            <img src={convertFileSrc(size === "large" || !s.thumb ? s.path : s.thumb)} alt="" loading="lazy" decoding="async" />
             {#if s.online}<span class="tag" title="Uploaded to your Steam profile">On Steam</span>{/if}
           </button>
         {/snippet}
@@ -186,6 +223,17 @@
   .count { font-size: var(--fs-md); font-weight: 400; color: var(--text-dim); margin-left: 8px; }
   select { max-width: 320px; }
   .dim { color: var(--text-dim); }
+  /* Small / Medium / Large */
+  .sizes {
+    display: flex; gap: 2px; padding: 2px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .sizes button {
+    padding: 5px 12px; border: none; border-radius: 4px; font-size: var(--fs-sm);
+    background: transparent; color: var(--text-dim); transition: color 0.15s, background 0.15s;
+  }
+  .sizes button:hover { color: var(--text); }
+  .sizes button[aria-checked="true"] { background: var(--surface-2); color: var(--text); font-weight: 600; }
   .check {
     display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer;
     border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--fs-md); color: var(--text-dim);
@@ -197,7 +245,7 @@
   .grid-wrap { flex: 1; min-height: 0; }
 
   .shot {
-    position: relative; width: 240px; height: 135px; padding: 0; overflow: hidden;
+    position: relative; padding: 0; overflow: hidden;
     border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
     transition: border-color 0.15s, transform 0.15s;
   }
