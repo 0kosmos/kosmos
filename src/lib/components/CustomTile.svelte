@@ -24,7 +24,10 @@
   <TileButtons gameKey={"c" + game.id} name={game.name} onedit={() => onedit(game)} />
   <button class="open" onclick={() => onedit(game)} title="Change name or picture">
     <div class="cover" style="--hue: {hue}">
-      {#if src}
+      {#if src && game.coverIsIcon}
+        <!-- The app's own icon: centered, not stretched -->
+        <img class="icon" {src} alt="" loading="lazy" decoding="async" onerror={() => (imgFailed = true)} />
+      {:else if src}
         <img {src} alt="" loading="lazy" decoding="async" onerror={() => (imgFailed = true)} />
       {:else}
         <span class="name">{game.name}</span>
@@ -70,6 +73,10 @@
     background: linear-gradient(160deg, hsl(var(--hue) 55% 38%), hsl(calc(var(--hue) + 40) 50% 18%));
   }
   img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  img.icon {
+    width: 96px; height: 96px; object-fit: contain;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35)); /* lifts it off the colored background */
+  }
   .name {
     padding: 12px; font-size: 1.05rem; font-weight: 700; line-height: 1.25; text-align: center;
     color: #fff; /* sits on the generated colored cover, same in both themes */

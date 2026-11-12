@@ -27,9 +27,9 @@
     (() => {
       try {
         const v = localStorage.getItem(SIZE_KEY);
-        return v === "small" || v === "large" ? v : "medium";
+        return v === "small" || v === "medium" ? v : "large";
       } catch {
-        return "medium";
+        return "large";
       }
     })()
   );

@@ -5,7 +5,7 @@
   import { untrack } from "svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import {
-    type CustomGame, type FileInfo, fileInfo, saveCover, cleanCovers, addGame, updateGame, removeGame,
+    type CustomGame, type FileInfo, fileInfo, saveCover, saveIcon, cleanCovers, addGame, updateGame, removeGame,
     newId, coverUrl, fmtBytes,
   } from "$lib/customGames.svelte";
 
@@ -21,6 +21,16 @@
 
   let name = $state(start.game?.name ?? "");
   let cover = $state(start.game?.cover ?? "");
+  // The app's own icon (taken from the file); used as the picture unless you pick one
+  let icon = $state(start.game?.coverIsIcon ? (start.game?.cover ?? "") : "");
+  const usingIcon = $derived(!!cover && cover === icon);
+  saveIcon(target, id)
+    .then((path) => {
+      if (!path) return;
+      icon = path;
+      if (!cover) cover = path; // no picture yet: use the icon
+    })
+    .catch(() => {});
   let info = $state<FileInfo | null>(null);
   let error = $state("");
 
@@ -49,10 +59,12 @@
 
   function finish(withChoices: boolean) {
     const finalName = (withChoices ? name.trim() : "") || info?.name || fileName.replace(/\.[^.]+$/, "");
-    const finalCover = withChoices ? cover : "";
+    // Skip keeps the app's icon (no letter tile)
+    const finalCover = withChoices ? cover : icon;
     const sizes = { fileBytes: info?.fileBytes ?? start.game?.fileBytes ?? 0, folderBytes: info?.folderBytes ?? start.game?.folderBytes ?? 0 };
-    if (editing) updateGame(id, { name: finalName, cover: finalCover, ...sizes });
-    else addGame({ id, name: finalName, path: target, cover: finalCover, ...sizes, added: Date.now() });
+    const isIcon = !!finalCover && finalCover === icon;
+    if (editing) updateGame(id, { name: finalName, cover: finalCover, coverIsIcon: isIcon, iconTried: true, ...sizes });
+    else addGame({ id, name: finalName, path: target, cover: finalCover, coverIsIcon: isIcon, iconTried: true, ...sizes, added: Date.now() });
     cleanCovers(id, finalCover); // remove pictures you tried but didn't keep
     onclose();
   }
@@ -84,7 +96,7 @@
       <!-- Cover picture (click to pick one) -->
       <button class="cover" onclick={pickPicture} title="Pick a picture">
         {#if cover}
-          <img src={coverUrl(cover)} alt="" />
+          <img class:icon={usingIcon} src={coverUrl(cover)} alt="" />
         {:else}
           <span>+ Picture</span>
         {/if}
@@ -99,10 +111,14 @@
         <div class="field">
           <span>Picture</span>
           <div class="row">
-            <button class="ghost" onclick={pickPicture}>{cover ? "Change picture" : "Choose picture"}</button>
-            {#if cover}<button class="ghost" onclick={() => (cover = "")}>Remove</button>{/if}
+            <button class="ghost" onclick={pickPicture}>{cover && !usingIcon ? "Change picture" : "Choose picture"}</button>
+            {#if icon && !usingIcon}
+              <button class="ghost" onclick={() => (cover = icon)}>Use app icon</button>
+            {:else if cover}
+              <button class="ghost" onclick={() => (cover = "")}>Remove</button>
+            {/if}
           </div>
-          <small>A tall picture works best (like a game box).</small>
+          <small>{usingIcon ? "Using the app's own icon. A tall picture (like a game box) looks best." : "A tall picture works best (like a game box)."}</small>
         </div>
 
         <div class="field">
@@ -165,6 +181,7 @@
   }
   .cover:hover { border-color: var(--text-dim); color: var(--text); }
   .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cover img.icon { width: 72px; height: 72px; object-fit: contain; }
   .fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field > span { font-size: var(--fs-sm); font-weight: 600; }

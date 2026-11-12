@@ -12,7 +12,10 @@
   import FilterPanel from "$lib/components/FilterPanel.svelte";
   import CustomTile from "$lib/components/CustomTile.svelte";
   import CustomGameDialog from "$lib/components/CustomGameDialog.svelte";
-  import { custom, type CustomGame } from "$lib/customGames.svelte";
+  import { custom, fillMissingIcons, type CustomGame } from "$lib/customGames.svelte";
+  onMount(() => {
+    fillMissingIcons(); // your own games without a picture get their app's icon
+  });
   import { hidden, isHiddenGame } from "$lib/hidden.svelte";
   import { open as openFile } from "@tauri-apps/plugin-dialog";
 

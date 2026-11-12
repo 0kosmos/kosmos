@@ -40,7 +40,7 @@
   type Saved = { appid: number; sort: string; filters: string[]; min: string; max: string };
 
   function load(): Saved {
-    const base: Saved = { appid: 0, sort: "popular", filters: [], min: "", max: "" }; // 0 = All games
+    const base: Saved = { appid: 730, sort: "popular", filters: [], min: "", max: "" }; // Counter-Strike 2 (0 = All games)
     try {
       return { ...base, ...JSON.parse(localStorage.getItem(SAVE_KEY) || "{}") };
     } catch {

@@ -9,6 +9,8 @@ export interface CustomGame {
   name: string;
   path: string; // the program or shortcut
   cover: string; // copied picture on this PC ("" = none: the tile shows the name)
+  coverIsIcon?: boolean; // the picture is the app's own icon (shown smaller, centered)
+  iconTried?: boolean; // we already tried to take its icon (don't keep trying)
   fileBytes: number;
   folderBytes: number; // the folder it's in (usually the game's real size), 0 if unknown
   added: number; // ms
@@ -69,6 +71,22 @@ export function removeGame(id: string) {
 }
 
 export const launchGame = (g: CustomGame) => invoke("custom_launch", { path: g.path });
+
+/** Save the icon inside the program or shortcut as a picture; returns where ("" = no icon) */
+export const saveIcon = (path: string, id: string) => invoke<string>("custom_icon_save", { path, id });
+
+/** Games added before icons existed (or without a picture): give them their app's icon, once */
+export async function fillMissingIcons() {
+  for (const g of custom.games.filter((x) => !x.cover && !x.iconTried)) {
+    let cover = "";
+    try {
+      cover = await saveIcon(g.path, g.id);
+    } catch {
+      /* the file may be gone: keep the name tile */
+    }
+    updateGame(g.id, cover ? { cover, coverIsIcon: true, iconTried: true } : { iconTried: true });
+  }
+}
 
 /** A picture file on this PC as something the page can show */
 export const coverUrl = (path: string) => (path ? convertFileSrc(path) : "");

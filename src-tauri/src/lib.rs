@@ -8,6 +8,7 @@ mod pcinfo;
 mod screenshots;
 mod stats;
 mod tray;
+mod uninstall;
 mod watch;
 
 // ---------- Currently playing ----------
@@ -122,10 +123,13 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             running_app,
             appstats::app_usage,
+            uninstall::can_uninstall,
+            uninstall::uninstall_kosmos,
             custom::custom_file_info,
             custom::custom_cover_save,
             custom::custom_cover_delete,
             custom::custom_launch,
+            custom::custom_icon_save,
             screenshots::steam_screenshots,
             screenshots::screenshot_save,
             screenshots::screenshot_copy,

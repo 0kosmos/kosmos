@@ -3,6 +3,27 @@
   import { page } from "$app/state";
   import { openWelcome } from "$lib/welcome.svelte";
   import { showWhatsNew } from "$lib/whatsNew.svelte";
+  import { updater, checkForUpdate, installUpdate } from "$lib/updater.svelte";
+  import { getVersion } from "@tauri-apps/api/app";
+  import { invoke } from "@tauri-apps/api/core";
+
+  // ---------- System: version, updates, uninstall ----------
+  let appVersion = $state("");
+  getVersion().then((v) => (appVersion = v)).catch(() => {});
+
+  let canUninstall = $state(false);
+  invoke<boolean>("can_uninstall").then((v) => (canUninstall = v)).catch(() => {});
+  let deleteData = $state(true); // "Also delete all my Kosmos data": ticked by default
+  let confirmUninstall = $state(false); // first click asks "Are you sure?"
+  let uninstallError = $state("");
+  function uninstall() {
+    if (!confirmUninstall) {
+      confirmUninstall = true;
+      return;
+    }
+    uninstallError = "";
+    invoke("uninstall_kosmos", { deleteData }).catch((e) => (uninstallError = String(e)));
+  }
   import {
     settings,
     toggleTab,
@@ -456,6 +477,73 @@
       </div>
     </div>
   </section>
+
+  <section>
+    <h2>Updates</h2>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Kosmos {appVersion}</strong>
+          <p class="dim">
+            {#if updater.status === "checking"}
+              Checking for updates...
+            {:else if updater.status === "available"}
+              Kosmos {updater.version} is available.
+            {:else if updater.status === "downloading"}
+              Downloading the update ({updater.progress}%)...
+            {:else if updater.status === "installing"}
+              Installing the update...
+            {:else if updater.status === "none"}
+              You have the newest version.
+            {:else if updater.status === "error"}
+              {updater.failed === "install" ? "The update didn't install. Try again." : "Couldn't check for updates. Try again later."}
+            {:else}
+              Kosmos also checks by itself each time it starts.
+            {/if}
+          </p>
+        </div>
+        {#if updater.status === "available"}
+          <button class="accent-btn" onclick={installUpdate}>Update to {updater.version}</button>
+        {:else}
+          <button
+            class="ghost-btn"
+            onclick={() => checkForUpdate(true)}
+            disabled={updater.status === "checking" || updater.status === "downloading" || updater.status === "installing"}
+          >
+            Check for updates
+          </button>
+        {/if}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Uninstall</h2>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Uninstall Kosmos</strong>
+          <p class="dim">Removes Kosmos from this PC. Your games, Steam and Epic aren't touched.</p>
+        </div>
+        <button class="danger-btn" onclick={uninstall} disabled={!canUninstall}>
+          {confirmUninstall ? "Click again to uninstall" : "Uninstall"}
+        </button>
+      </div>
+      <label class="row check">
+        <input type="checkbox" bind:checked={deleteData} />
+        <span>
+          <strong>Also delete all my Kosmos data</strong>
+          <span class="dim block">Settings, sign-in, favorites, wishlists, your own games' pictures and saved files, so nothing of Kosmos is left.</span>
+        </span>
+      </label>
+    </div>
+    {#if !canUninstall}
+      <p class="dim note">This is the test version: uninstalling only works in the installed Kosmos.</p>
+    {:else if confirmUninstall}
+      <p class="dim note">Kosmos will close and Windows' uninstaller will open. <button class="link-btn" onclick={() => (confirmUninstall = false)}>Cancel</button></p>
+    {/if}
+    {#if uninstallError}<p class="err note">{uninstallError}</p>{/if}
+  </section>
 {/if}
 
 <style>
@@ -553,5 +641,22 @@
     background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
     color: var(--text); transition: border-color 0.15s;
   }
-  .ghost-btn:hover { border-color: var(--text-dim); }
+  .ghost-btn:hover:not(:disabled) { border-color: var(--text-dim); }
+  .ghost-btn:disabled, .danger-btn:disabled { opacity: 0.5; cursor: default; }
+  .accent-btn {
+    flex-shrink: 0; padding: 6px 14px; font-size: var(--fs-md); font-weight: 600;
+    background: var(--accent); color: var(--on-accent); border: none; border-radius: var(--radius-sm);
+  }
+  .accent-btn:hover { filter: brightness(1.1); }
+  .danger-btn {
+    flex-shrink: 0; padding: 6px 14px; font-size: var(--fs-md);
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--bad);
+    transition: border-color 0.15s;
+  }
+  .danger-btn:hover:not(:disabled) { border-color: var(--bad); }
+  .block { display: block; }
+  .note { margin: 8px 2px 0; }
+  .err { color: var(--bad); font-size: var(--fs-sm); }
+  .link-btn { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; }
+  .link-btn:hover { text-decoration: underline; }
 </style>
