@@ -15,6 +15,7 @@ export interface GameInfo {
   comingSoon?: boolean;
   header?: string;
   screenshots?: { thumb: string; full: string }[];
+  movies?: { id: number; name: string; thumb: string; hls: string }[]; // trailers
   requirements?: { minimum: string; recommended: string };
   reviews?: null | {
     summary: string;
@@ -107,7 +108,7 @@ export async function fetchGameInfo(appid: number): Promise<GameInfo> {
   if (hit) return hit;
 
   // ("v" changes whenever the Worker starts sending new fields, so old cached answers aren't reused)
-  const res = await fetch(`${API_BASE}/game?appid=${appid}&v=5${cc ? "&cc=" + cc : ""}`);
+  const res = await fetch(`${API_BASE}/game?appid=${appid}&v=6${cc ? "&cc=" + cc : ""}`);
   if (!res.ok) throw new Error("Request failed");
   const info = (await res.json()) as GameInfo;
 

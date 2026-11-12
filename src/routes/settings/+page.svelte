@@ -11,6 +11,7 @@
     setTheme,
     setAccent,
     setStatusBar,
+    setShowVideos,
     setTimeZone,
     ACCENTS,
     setStoreRegion,
@@ -369,6 +370,19 @@
           </p>
         </div>
         <button class="switch" role="switch" aria-checked={settings.liveStats} aria-label="Live game stats" onclick={() => setLiveStats(!settings.liveStats)}>
+          <span class="knob"></span>
+        </button>
+      </div>
+      <div class="row">
+        <div>
+          <strong>Trailers and videos</strong>
+          <p class="dim">
+            Shows game trailers next to the screenshots on game pages. Off by default, because
+            videos use much more internet and memory. They never play by themselves: only when you
+            open one.
+          </p>
+        </div>
+        <button class="switch" role="switch" aria-checked={settings.showVideos} aria-label="Trailers and videos" onclick={() => setShowVideos(!settings.showVideos)}>
           <span class="knob"></span>
         </button>
       </div>

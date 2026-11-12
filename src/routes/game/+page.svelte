@@ -5,6 +5,8 @@
   import { library } from "$lib/library.svelte";
   import { fetchGameInfo, fetchReviews, type GameInfo, type Review } from "$lib/gameInfo";
   import NewsRow from "$lib/components/NewsRow.svelte";
+  import TrailerPlayer from "$lib/components/TrailerPlayer.svelte";
+  import { settings } from "$lib/settings.svelte";
   import { playing } from "$lib/playing.svelte";
   import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
   import { refreshInstalled, stateOf } from "$lib/installed.svelte";
@@ -52,7 +54,8 @@
 
   let info = $state<GameInfo | null>(null);
   let status = $state<"loading" | "ready" | "error">("loading");
-  let shot = $state(0);
+  let shot = $state(0); // which picture or trailer is shown big
+  let picked = $state(false); // you clicked a thumbnail (then a trailer may start by itself)
   let playError = $state("");
   let allTags = $state(false); // "+N more" tags expanded
 
@@ -61,6 +64,7 @@
     info = null;
     status = "loading";
     shot = 0;
+    picked = false;
     playError = "";
     reqTab = "min";
     allTags = false;
@@ -147,6 +151,24 @@
 
   const title = $derived(info?.name ?? mine?.name ?? "Game");
   const shots = $derived(info?.screenshots ?? []);
+  const movies = $derived(info?.movies ?? []);
+  // Gallery: trailers first (only when videos are turned on in Settings), then screenshots
+  type Media = { kind: "video"; thumb: string; hls: string; name: string } | { kind: "image"; thumb: string; full: string };
+  const media = $derived<Media[]>([
+    ...(settings.showVideos ? movies.map((m) => ({ kind: "video" as const, thumb: m.thumb, hls: m.hls, name: m.name })) : []),
+    ...shots.map((s) => ({ kind: "image" as const, thumb: s.thumb, full: s.full })),
+  ]);
+  const current = $derived(media[Math.min(shot, media.length - 1)]);
+
+  // "Turn on in Settings": open Settings on the Performance page
+  function openVideoSettings() {
+    try {
+      localStorage.setItem("kosmos-settings-category", "performance");
+    } catch {
+      /* ignore */
+    }
+    goto("/settings");
+  }
   const pct = $derived(
     info?.reviews && info.reviews.total > 0
       ? Math.round((info.reviews.positive / info.reviews.total) * 100)
@@ -333,16 +355,38 @@
       <div class="layout">
         <!-- ---------- Left: main content ---------- -->
         <div class="main">
-          {#if shots.length}
+          {#if media.length}
             <section>
-              <img class="shot" src={shots[shot].full} alt="Screenshot {shot + 1}" />
+              {#if current.kind === "video"}
+                {#key current.hls}
+                  <TrailerPlayer src={current.hls} poster={current.thumb} autoplay={picked} />
+                {/key}
+              {:else}
+                <img class="shot" src={current.full} alt="Screenshot" />
+              {/if}
               <div class="thumbs">
-                {#each shots as s, i}
-                  <button class:on={i === shot} onclick={() => (shot = i)} aria-label="Screenshot {i + 1}">
-                    <img src={s.thumb} alt="" loading="lazy" decoding="async" />
+                {#each media as m, i (m.thumb)}
+                  <button
+                    class:on={i === shot}
+                    onclick={() => { shot = i; picked = true; }}
+                    aria-label={m.kind === "video" ? "Trailer: " + m.name : "Screenshot"}
+                    title={m.kind === "video" ? m.name : undefined}
+                  >
+                    <img src={m.thumb} alt="" loading="lazy" decoding="async" />
+                    {#if m.kind === "video"}<span class="play-icon" aria-hidden="true">▶</span>{/if}
                   </button>
                 {/each}
               </div>
+              {#if !settings.showVideos && movies.length}
+                <!-- Reminder: this game has trailers, but videos are turned off -->
+                <div class="video-note">
+                  <span>
+                    This game has {movies.length} {movies.length === 1 ? "trailer" : "trailers"}. Videos are
+                    turned off to keep Kosmos light.
+                  </span>
+                  <button class="ghost-small" onclick={openVideoSettings}>Turn on in Settings</button>
+                </div>
+              {/if}
             </section>
           {/if}
 
@@ -596,6 +640,25 @@
   }
   .thumbs button.on { border-color: var(--accent); opacity: 1; }
   .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumbs button { position: relative; }
+  /* ▶ on trailer thumbnails */
+  .play-icon {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 1.1rem; color: #fff; /* on the picture, same in both themes */
+    background: color-mix(in srgb, #000 30%, transparent);
+  }
+  /* "Videos are turned off" reminder under the gallery */
+  .video-note {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin-top: 8px; padding: 9px 12px; font-size: var(--fs-sm); color: var(--text-dim);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .ghost-small {
+    flex-shrink: 0; padding: 5px 10px; font-size: var(--fs-sm);
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); transition: border-color 0.15s;
+  }
+  .ghost-small:hover { border-color: var(--text-dim); }
   .text { white-space: pre-wrap; line-height: 1.55; margin: 0; }
   .summary { margin: 0 0 12px; }
   .reviews { display: flex; flex-direction: column; gap: 10px; }

@@ -1299,6 +1299,13 @@ export default {
               thumb: s.path_thumbnail,
               full: s.path_full,
             })),
+            // Trailers (Steam streams them: "hls" is the address of the stream). The main
+            // trailer first. The app only shows them when videos are turned on in its settings.
+            movies: (d.movies || [])
+              .filter((m) => /^https:\/\//.test(m.hls_h264 || "") && /^https:\/\//.test(m.thumbnail || ""))
+              .sort((a, b) => Number(!!b.highlight) - Number(!!a.highlight))
+              .slice(0, 8)
+              .map((m) => ({ id: m.id, name: String(m.name || "").slice(0, 120), thumb: m.thumbnail, hls: m.hls_h264 })),
             requirements: {
               minimum: stripHtml(d.pc_requirements && d.pc_requirements.minimum),
               recommended: stripHtml(d.pc_requirements && d.pc_requirements.recommended),
