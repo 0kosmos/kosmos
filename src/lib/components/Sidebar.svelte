@@ -15,7 +15,9 @@
   import { me, refreshProfile, statusText, statusKind } from "$lib/profile.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { onMount } from "svelte";
-  import { downloadsBadge, refreshDownloadsBadge } from "$lib/downloadsBadge.svelte";
+  import { refreshDownloadsBadge, noteEpic, badgeKind } from "$lib/downloadsBadge.svelte";
+  import { onInstallsChanged } from "$lib/installEvents";
+  import { untrack } from "svelte";
   import { epic, loadEpic } from "$lib/epic.svelte";
 
   // ---------- Dot on "Downloads": updates waiting or downloads going (Steam + Epic) ----------
@@ -29,7 +31,17 @@
     window.addEventListener("focus", check);
     return () => window.removeEventListener("focus", check);
   });
-  const pendingDownloads = $derived(downloadsBadge.steam + epic.games.filter((g) => g.installing).length);
+  // Epic's list changed (read by the sidebar, Library or Downloads): update the dot
+  $effect(() => {
+    const games = epic.games;
+    if (epic.loaded) untrack(() => noteEpic(games));
+  });
+  // The moment Steam or Epic change their install files (download started, finished, update
+  // needed), Windows tells the Rust side, which tells us: update the dot right away.
+  // Nothing is checked on a timer.
+  $effect(() => onInstallsChanged(() => refreshDownloadsBadge(true), () => loadEpic(true)));
+  const dot = $derived(badgeKind());
+  const DOT_TITLE = { update: "Updates waiting", install: "Installing", done: "Download finished" };
 
   // ---------- Your profile box (bottom) ----------
   // Loads when you sign in / out; refreshed when you come back to the window (max once a minute).
@@ -237,12 +249,8 @@
         >
           <Icon d={tab.icon} />
           {tab.label}
-          {#if tab.id === "downloads" && pendingDownloads}
-            <span
-              class="badge-dot"
-              title={pendingDownloads + (pendingDownloads === 1 ? " update or download" : " updates or downloads")}
-              aria-label={pendingDownloads + " pending"}
-            ></span>
+          {#if tab.id === "downloads" && dot}
+            <span class="badge-dot {dot}" title={DOT_TITLE[dot]} aria-label={DOT_TITLE[dot]}></span>
           {/if}
         </a>
         {#if tab.id !== "library"}
@@ -433,12 +441,20 @@
   a:hover :global(svg) { opacity: 1; }
   a.active :global(svg) { color: var(--accent); opacity: 1; }
   .brand :global(svg) { opacity: 1; }
-  /* Small dot on "Downloads" when an update or download is waiting */
+  /* Small dot on "Downloads", at the right edge of the row:
+     orange = updates waiting, white (black in the white theme) = installing, green = finished */
   .badge-dot {
-    width: 7px; height: 7px; border-radius: 50%; margin-left: 2px; flex-shrink: 0;
-    background: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+    --dot: var(--text);
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    margin-left: auto; margin-right: 4px;
+    background: var(--dot);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 20%, transparent);
+    transition: opacity 0.15s;
   }
+  .badge-dot.update { --dot: var(--warn); }
+  .badge-dot.done { --dot: var(--good); }
+  /* The hide button takes that spot while you hover the row */
+  .item:hover .badge-dot { opacity: 0; }
   /* ---------- Drag and hide ---------- */
   nav { user-select: none; }
   nav.dragging, nav.dragging a { cursor: grabbing; }

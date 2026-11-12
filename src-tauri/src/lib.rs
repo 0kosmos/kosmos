@@ -5,6 +5,7 @@ mod launch;
 mod pcinfo;
 mod stats;
 mod tray;
+mod watch;
 
 // ---------- Currently playing ----------
 // Steam writes the running game's ID to HKCU\Software\Valve\Steam\RunningAppID (0 = none).
@@ -125,6 +126,9 @@ pub fn run() {
             // Watch for the game Steam is running (for "Currently playing" in the sidebar)
             #[cfg(windows)]
             watch_running_app(_app.handle().clone());
+
+            // Tell the app right away when Steam or Epic install files change (Downloads dot etc.)
+            watch::start(_app.handle().clone());
 
             // The installer registers kosmos:// links with Windows. In dev builds there's no
             // installer, so register them here (only for the current Windows user).

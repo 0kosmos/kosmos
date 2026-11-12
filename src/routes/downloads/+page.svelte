@@ -3,7 +3,14 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import Capsule from "$lib/components/Capsule.svelte";
   import { epic, loadEpic, openEpicLibrary, smallCover, type EpicGame } from "$lib/epic.svelte";
-  import { setSteamPending } from "$lib/downloadsBadge.svelte";
+  import { noteSteam, clearDone } from "$lib/downloadsBadge.svelte";
+  import { onInstallsChanged } from "$lib/installEvents";
+  import { onMount } from "svelte";
+  // You're looking at Downloads: anything that finished has been seen (also when you leave)
+  onMount(() => {
+    clearDone();
+    return clearDone;
+  });
 
   // Downloads view: what Steam and the Epic Games Launcher have installed or are installing,
   // read from their own install files on this PC. The launchers do all the work; this page
@@ -46,7 +53,7 @@
     try {
       games = await invoke<Install[]>("steam_installs");
       status = "ready";
-      setSteamPending(games.filter((g) => g.status !== "installed").length); // sidebar dot
+      noteSteam(games); // sidebar dot
       measure(games); // real sizes of games not measured since their last update
     } catch {
       status = "error";
@@ -151,9 +158,10 @@
     return [...map.entries()].sort();
   });
 
-  // Load when the page opens and when you come back to the window.
-  // Only while something is actively downloading: re-read every 2 s, and only while
-  // this window is visible. Otherwise nothing runs.
+  // Load when the page opens, when you come back to the window, and the moment Steam or Epic
+  // change their install files (a download starts, pauses or finishes).
+  // Only while something is actively downloading: also re-read every 2 s for the progress bar,
+  // and only while this window is visible. Otherwise nothing runs.
   $effect(() => {
     load();
     loadEpic(true);
@@ -162,7 +170,11 @@
       loadEpic(true);
     };
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    const stop = onInstallsChanged(load, () => loadEpic(true));
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      stop();
+    };
   });
 
   $effect(() => {

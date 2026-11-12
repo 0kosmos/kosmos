@@ -20,7 +20,7 @@ export interface EpicGame {
   wide: string; // wide picture, for lists (may be empty)
 }
 
-export const epic = $state({ games: [] as EpicGame[] });
+export const epic = $state({ games: [] as EpicGame[], loaded: false });
 
 let lastRead = 0;
 
@@ -29,6 +29,7 @@ export async function loadEpic(force = false) {
   lastRead = Date.now();
   try {
     epic.games = await invoke<EpicGame[]>("epic_library");
+    epic.loaded = true;
   } catch {
     /* not running inside Tauri: no Epic games */
   }

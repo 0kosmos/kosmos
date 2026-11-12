@@ -43,6 +43,7 @@
   import { signOut } from "$lib/auth.svelte";
   import SignInCard from "$lib/components/SignInCard.svelte";
   import { refreshInstalled } from "$lib/installed.svelte";
+  import { onInstallsChanged } from "$lib/installEvents";
   import { playing } from "$lib/playing.svelte";
 
   // Which games are installed (for the Play / Install buttons on the tiles).
@@ -62,7 +63,12 @@
       if (settings.libraryEpic) loadEpic();
     };
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    // Steam / Epic changed their install files (download started or finished): update the buttons
+    const stop = onInstallsChanged(refreshInstalled, () => loadEpic(true));
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      stop();
+    };
   });
 
   // One list for every launcher. Epic doesn't share playtime or tags, so Epic games are left

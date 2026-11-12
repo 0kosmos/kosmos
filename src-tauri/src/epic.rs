@@ -27,7 +27,7 @@ pub struct EpicGame {
 
 /// The launcher's data folder. Epic writes its path to the registry; if it's missing,
 /// use the usual place.
-fn data_dir() -> PathBuf {
+pub(crate) fn data_dir() -> PathBuf {
     #[cfg(windows)]
     if let Ok(p) = windows_registry::LOCAL_MACHINE
         .open(r"SOFTWARE\WOW6432Node\Epic Games\EpicGamesLauncher")
