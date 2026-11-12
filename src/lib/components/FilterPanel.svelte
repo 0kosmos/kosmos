@@ -5,6 +5,7 @@
   import { installed } from "$lib/installed.svelte";
   import { epic } from "$lib/epic.svelte";
   import { settings, setLibrarySource } from "$lib/settings.svelte";
+  import { isFavorite, steamKey, epicKey } from "$lib/favorites.svelte";
 
   // Checkbox filters on the left of the Library (like Steam store filters).
   // A game must match everything that's ticked.
@@ -12,6 +13,7 @@
 
   const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
   const STATUS: { key: StatusKey; label: string }[] = [
+    { key: "favorites", label: "★ Favorites" },
     { key: "installed", label: "Installed locally" },
     { key: "notInstalled", label: "Not installed" },
     { key: "played", label: "Played" },
@@ -21,9 +23,10 @@
 
   const statusCount = $derived.by(() => {
     const now = Date.now();
-    const c: Record<StatusKey, number> = { installed: 0, notInstalled: 0, played: 0, neverPlayed: 0, recent: 0 };
+    const c: Record<StatusKey, number> = { favorites: 0, installed: 0, notInstalled: 0, played: 0, neverPlayed: 0, recent: 0 };
     if (settings.librarySteam) {
       for (const g of library.games) {
+        if (isFavorite(steamKey(g.appid))) c.favorites++;
         if (installed.states.has(g.appid)) c.installed++;
         else c.notInstalled++;
         if (g.hours > 0) c.played++;
@@ -33,6 +36,7 @@
     }
     if (settings.libraryEpic) {
       for (const g of epic.games) {
+        if (isFavorite(epicKey(g.appName))) c.favorites++;
         if (g.installed) c.installed++;
         else c.notInstalled++;
       }

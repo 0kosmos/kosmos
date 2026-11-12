@@ -21,6 +21,13 @@
   </div>
   <div class="body">
     <span class="name" title={game.name}>{game.name}</span>
+    {#if game.comingSoon}
+      <!-- Not out yet: when it comes out instead of reviews and price -->
+      <div class="row">
+        <span class="rev">Coming soon</span>
+        <span class="release">{game.releaseText || "Coming soon"}</span>
+      </div>
+    {:else}
     <div class="row">
       {#if game.reviewPct != null}
         <span class="rev {tone}" title={game.reviewLabel}>{game.reviewPct}% · {game.reviewLabel}</span>
@@ -35,6 +42,7 @@
         <span class="now">{game.priceText || "—"}</span>
       </span>
     </div>
+    {/if}
     {#if game.discount && daysLeft > 0 && daysLeft <= 14}
       <span class="ends">Sale ends in {daysLeft} {daysLeft === 1 ? "day" : "days"}</span>
     {/if}
@@ -69,4 +77,5 @@
   .old { font-size: 0.72rem; color: var(--text-dim); text-decoration: line-through; }
   .now { font-weight: 700; font-size: var(--fs-md); }
   .ends { font-size: 0.72rem; color: var(--text-dim); }
+  .release { font-weight: 700; font-size: var(--fs-sm); flex-shrink: 0; }
 </style>

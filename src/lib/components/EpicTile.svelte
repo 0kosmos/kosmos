@@ -4,6 +4,9 @@
 <script lang="ts">
   import { type EpicGame, type EpicResult, playEpic, installEpic, openEpicLibrary, searchEpicStore, smallCover } from "$lib/epic.svelte";
 
+  import FavoriteStar from "./FavoriteStar.svelte";
+  import { epicKey } from "$lib/favorites.svelte";
+
   let { game }: { game: EpicGame } = $props();
 
   // Cover: the shrunk picture first, the full one if that fails, then the game's name
@@ -38,6 +41,7 @@
 </script>
 
 <div class="tile">
+  <FavoriteStar gameKey={epicKey(game.appName)} name={game.name} />
   <button class="open" onclick={() => run(searchEpicStore(game.name))} title="Find it on the Epic Games Store">
     <div class="cover" style="--hue: {hue}">
       {#if current}

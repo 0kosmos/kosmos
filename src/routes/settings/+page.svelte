@@ -292,7 +292,7 @@
           <strong>Free games on Epic Games</strong>
           <p class="dim">This week's free games on the Epic Games Store, and next week's, at the top of the Store. Same as the Epic Games checkbox in the Store.</p>
         </div>
-        <button class="switch" role="switch" aria-checked={settings.storeEpic} aria-label="Show Epic Games free games" onclick={() => setStoreEpic(!settings.storeEpic)}>
+        <button class="switch" role="switch" aria-checked={settings.storeEpicFree} aria-label="Show Epic Games free games" onclick={() => setStoreEpic(!settings.storeEpicFree)}>
           <span class="knob"></span>
         </button>
       </div>

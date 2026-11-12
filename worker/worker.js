@@ -170,6 +170,21 @@ function passesPrefs(g, prefs) {
   return true;
 }
 
+// When an unreleased game comes out, the way Steam shows it: "Mar 4, 2027", "March 2027",
+// "Q1 2027", "2027", or a text like "Coming soon" / "To be announced"
+function releaseText(r) {
+  if (!r || !r.is_coming_soon) return "";
+  const d = r.steam_release_date ? new Date(r.steam_release_date * 1000) : null;
+  const opt = (o) => d.toLocaleDateString("en-US", { timeZone: "UTC", ...o });
+  switch (r.coming_soon_display) {
+    case "date_full": return d ? opt({ month: "short", day: "numeric", year: "numeric" }) : "Coming soon";
+    case "date_month": return d ? opt({ month: "long", year: "numeric" }) : "Coming soon";
+    case "date_quarter": return d ? `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${d.getUTCFullYear()}` : "Coming soon";
+    case "date_year": return d ? String(d.getUTCFullYear()) : "Coming soon";
+    default: return String(r.custom_release_date_message || "Coming soon").slice(0, 40);
+  }
+}
+
 // Turn one Steam store item into the small shape the app needs
 function storeItem(it) {
   const p = it.best_purchase_option || {};
@@ -196,12 +211,16 @@ function storeItem(it) {
     reviewCount: r.review_count || 0,
     descriptors: it.content_descriptorids || [], // Steam's mature-content descriptors (1-5)
     platforms: platformsOf(it.platforms),
+    comingSoon: !!(it.release && it.release.is_coming_soon),
+    releaseText: releaseText(it.release), // "" when the game is already out
   };
 }
 
 // One page of Steam's store search. sort: 11 = top sellers, 21 = best rated, 1 = name
-async function storeQuery({ start = 0, count = 100, sort = 11, tagids = [], discounted = false, free = false }, cc) {
-  const filters = { released_only: true, type_filters: { include_games: true } };
+async function storeQuery({ start = 0, count = 100, sort = 11, tagids = [], discounted = false, free = false, upcoming = false }, cc) {
+  const filters = upcoming
+    ? { coming_soon_only: true, released_only: false, type_filters: { include_games: true } }
+    : { released_only: true, type_filters: { include_games: true } };
   if (tagids.length) filters.tagids_must_match = tagids.map((id) => ({ tagids: [id] }));
   if (discounted) filters.price_filters = { only_discounts: true };
   if (free) filters.price_filters = { only_free_items: true };
@@ -211,7 +230,7 @@ async function storeQuery({ start = 0, count = 100, sort = 11, tagids = [], disc
     JSON.stringify({
       query: { start, count, sort, filters },
       context: { language: "english", country_code: cc, steam_realm: 1 },
-      data_request: { include_basic_info: true, include_assets: true, include_reviews: true, include_ratings: true, include_platforms: true },
+      data_request: { include_basic_info: true, include_assets: true, include_reviews: true, include_ratings: true, include_platforms: true, include_release: true },
     })
   );
   const res = await fetch(u.toString(), { cf: { cacheTtl: 1800, cacheEverything: true } });
@@ -262,6 +281,15 @@ async function epicFree(cc) {
   }
   items.sort((a, b) => Number(b.now) - Number(a.now) || a.start - b.start);
   return items;
+}
+
+// Games that aren't out yet, most popular first (the big upcoming releases come first).
+// Returns up to `want` games that pass your content settings, plus where to continue.
+async function storeUpcoming(cc, prefs, start = 0, want = 20) {
+  const r = await storeQuery({ start, count: 50, sort: 11, upcoming: true }, cc);
+  const items = r.items.filter((g) => g.comingSoon && passesPrefs(g, prefs)).slice(0, want);
+  const next = r.items.length < 50 || start + 50 >= r.total ? -1 : start + 50;
+  return { items, next };
 }
 
 async function storeDeals(cc, prefs) {
@@ -350,7 +378,7 @@ async function storeItemsFor(ids, cc) {
       context: { language: "english", country_code: cc, steam_realm: 1 },
       data_request: {
         include_basic_info: true, include_assets: true, include_reviews: true,
-        include_ratings: true, include_platforms: true,
+        include_ratings: true, include_platforms: true, include_release: true,
       },
     })
   );
@@ -1081,6 +1109,10 @@ export default {
 
         if (url.pathname === "/store/epic-free") {
           return json({ cc, items: await epicFree(cc) }, 200, 1800);
+        }
+        if (url.pathname === "/store/upcoming") {
+          const start = /^\d{1,6}$/.test(url.searchParams.get("start") || "") ? Number(url.searchParams.get("start")) : 0;
+          return json({ cc, ...(await storeUpcoming(cc, prefs, start, 40)) }, 200, 1800);
         }
         if (url.pathname === "/store/deals") {
           return json({ cc, items: await storeDeals(cc, prefs) }, 200, 1800);

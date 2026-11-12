@@ -1,8 +1,8 @@
 export type SortKey = "name" | "name-desc" | "hours" | "hours-asc" | "recent";
 
 /** Status checkboxes in the library filter panel */
-export type StatusKey = "installed" | "notInstalled" | "played" | "neverPlayed" | "recent";
-export const STATUS_KEYS: StatusKey[] = ["installed", "notInstalled", "played", "neverPlayed", "recent"];
+export type StatusKey = "favorites" | "installed" | "notInstalled" | "played" | "neverPlayed" | "recent";
+export const STATUS_KEYS: StatusKey[] = ["favorites", "installed", "notInstalled", "played", "neverPlayed", "recent"];
 
 const KEY = "kosmos-library-view-v2";
 const SORTS: SortKey[] = ["name", "name-desc", "hours", "hours-asc", "recent"];

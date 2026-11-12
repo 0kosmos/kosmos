@@ -2,7 +2,7 @@
   import StoreCard from "$lib/components/StoreCard.svelte";
   import EpicFreeCard from "$lib/components/EpicFreeCard.svelte";
   import {
-    fetchDeals, searchStore, browseStore, fetchEpicFree, STORE_TAGS,
+    fetchDeals, searchStore, browseStore, fetchEpicFree, fetchUpcoming, STORE_TAGS,
     type StoreGame, type BrowseQuery, type Hidden, type EpicFreeGame,
   } from "$lib/store";
   import { settings, setStoreEpic } from "$lib/settings.svelte";
@@ -13,7 +13,7 @@
   let epicStatus = $state<"loading" | "ready" | "error">("loading");
   let epicAsked = false;
   $effect(() => {
-    if (!settings.storeEpic || epicAsked) return;
+    if (!settings.storeEpicFree || epicAsked) return;
     epicAsked = true;
     loadEpic(); // your Epic library, for the "In library" label
     fetchEpicFree()
@@ -101,6 +101,63 @@
       })
       .catch(() => (dealsStatus = "error"));
   });
+
+  // ---------- Coming soon (games not out yet; open one to wishlist it on Steam) ----------
+  const UPCOMING_KEY = "kosmos-store-upcoming-collapsed";
+  let upcomingCollapsed = $state(
+    (() => {
+      try {
+        return localStorage.getItem(UPCOMING_KEY) === "1";
+      } catch {
+        return false;
+      }
+    })()
+  );
+  function toggleUpcoming() {
+    upcomingCollapsed = !upcomingCollapsed;
+    try {
+      localStorage.setItem(UPCOMING_KEY, upcomingCollapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }
+  let upcoming = $state<StoreGame[]>([]);
+  let upcomingStatus = $state<"loading" | "ready" | "error">("loading");
+  let upcomingNext = $state(-1);
+  let upcomingMore = $state(false);
+  let upcomingAsked = false;
+  // Loaded the first time the row is open (nothing is loaded while it's collapsed)
+  $effect(() => {
+    if (upcomingCollapsed || upcomingAsked) return;
+    upcomingAsked = true;
+    fetchUpcoming()
+      .then((r) => {
+        upcoming = r.items;
+        upcomingNext = r.next;
+        upcomingStatus = "ready";
+      })
+      .catch(() => (upcomingStatus = "error"));
+  });
+  async function loadMoreUpcoming() {
+    if (upcomingNext < 0 || upcomingMore) return;
+    upcomingMore = true;
+    try {
+      const r = await fetchUpcoming(upcomingNext);
+      const seen = new Set(upcoming.map((g) => g.appid));
+      upcoming = [...upcoming, ...r.items.filter((g) => !seen.has(g.appid))];
+      upcomingNext = r.next;
+    } catch {
+      /* keep what we have */
+    } finally {
+      upcomingMore = false;
+    }
+  }
+  let upcomingRow: HTMLElement | undefined = $state();
+  function scrollUpcoming(dir: number) {
+    if (!upcomingRow) return;
+    const reduced = document.documentElement.dataset.motion === "reduced";
+    upcomingRow.scrollBy({ left: dir * upcomingRow.clientWidth * 0.8, behavior: reduced ? "auto" : "smooth" });
+  }
 
   // Currency symbol for the price meter, taken from a real price (e.g. "4,99€" -> "€")
   const currency = $derived(
@@ -283,7 +340,7 @@
     {/if}
     <!-- Show Epic's free games (same switch as Settings → Store) -->
     <label class="source">
-      <input type="checkbox" checked={settings.storeEpic} onchange={() => setStoreEpic(!settings.storeEpic)} />
+      <input type="checkbox" checked={settings.storeEpicFree} onchange={() => setStoreEpic(!settings.storeEpicFree)} />
       Epic Games
     </label>
   </div>
@@ -335,7 +392,7 @@
       {/if}
     </section>
   {:else}
-    {#if settings.storeEpic}
+    {#if settings.storeEpicFree}
       <!-- ---------- Epic Games: free games ---------- -->
       <section class="deals-section">
         <h2 class="section-head plain">Free on Epic Games</h2>
@@ -375,6 +432,38 @@
             {#each deals as g (g.appid)}<div class="deal"><StoreCard game={g} /></div>{/each}
           </div>
           <button class="nav right" onclick={() => scrollDeals(1)} aria-label="Scroll deals right">›</button>
+        </div>
+      {/if}
+    </section>
+
+    <!-- ---------- Coming soon ---------- -->
+    <section class="deals-section">
+      <button class="section-head" onclick={toggleUpcoming} aria-expanded={!upcomingCollapsed}>
+        <span>Coming soon</span>
+        <span class="chev" class:open={!upcomingCollapsed} aria-hidden="true">›</span>
+      </button>
+      {#if upcomingCollapsed}
+        <!-- hidden -->
+      {:else if upcomingStatus === "loading"}
+        <p class="dim">Loading upcoming games...</p>
+      {:else if upcomingStatus === "error"}
+        <p class="dim">Couldn't load upcoming games right now.</p>
+      {:else if upcoming.length === 0}
+        <p class="dim">No upcoming games to show.</p>
+      {:else}
+        <div class="carousel">
+          <button class="nav left" onclick={() => scrollUpcoming(-1)} aria-label="Scroll upcoming games left">‹</button>
+          <div class="deals" bind:this={upcomingRow}>
+            {#each upcoming as g (g.appid)}<div class="deal"><StoreCard game={g} /></div>{/each}
+            {#if upcomingNext >= 0}
+              <div class="deal">
+                <button class="more-card" onclick={loadMoreUpcoming} disabled={upcomingMore}>
+                  {upcomingMore ? "Loading..." : "Load more →"}
+                </button>
+              </div>
+            {/if}
+          </div>
+          <button class="nav right" onclick={() => scrollUpcoming(1)} aria-label="Scroll upcoming games right">›</button>
         </div>
       {/if}
     </section>
@@ -503,6 +592,13 @@
   }
   .carousel:hover .nav, .nav:focus-visible { opacity: 1; }
   .nav.left { left: -10px; }
+  /* Last "card" in the Coming soon row */
+  .more-card {
+    flex: 1; min-height: 120px; border-radius: var(--radius);
+    background: var(--surface); border: 1px dashed var(--border); color: var(--text-dim);
+    font-size: var(--fs-md); transition: color 0.15s, border-color 0.15s;
+  }
+  .more-card:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
   .nav.right { right: -10px; }
 
   /* ---------- Browse ---------- */

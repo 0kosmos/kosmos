@@ -27,6 +27,8 @@ export interface StoreGame {
   reviewPct: number | null;
   reviewLabel: string;
   reviewCount: number;
+  comingSoon?: boolean; // not out yet
+  releaseText?: string; // when it comes out, e.g. "Feb 23, 2027", "Q1 2027", "Coming soon"
 }
 
 export interface BrowseQuery {
@@ -64,6 +66,10 @@ export interface EpicFreeGame {
   originalPrice: string; // normal price, "" if the game is always free
 }
 export const fetchEpicFree = () => get<{ items: EpicFreeGame[] }>("/store/epic-free").then((d) => d.items);
+
+/** Games that aren't out yet, most popular first: 40 per page */
+export const fetchUpcoming = (start = 0) =>
+  get<{ items: StoreGame[]; next: number }>(`/store/upcoming?start=${start}`);
 
 export const fetchDeals = () => get<{ items: StoreGame[] }>("/store/deals").then((d) => d.items);
 

@@ -44,6 +44,7 @@
   import SignInCard from "$lib/components/SignInCard.svelte";
   import { refreshInstalled } from "$lib/installed.svelte";
   import { onInstallsChanged } from "$lib/installEvents";
+  import { isFavorite } from "$lib/favorites.svelte";
   import { playing } from "$lib/playing.svelte";
 
   // Which games are installed (for the Play / Install buttons on the tiles).
@@ -93,6 +94,7 @@
     // Ticked filters: a game must match all of them
     const now = Date.now();
     for (const s of view.status) {
+      if (s === "favorites") list = list.filter((g) => isFavorite(g.key));
       if (s === "installed") list = list.filter((g) => (isSteam(g) ? installed.states.has(g.steam.appid) : g.epic.installed));
       if (s === "notInstalled") list = list.filter((g) => (isSteam(g) ? !installed.states.has(g.steam.appid) : !g.epic.installed));
       if (s === "played") list = list.filter((g) => isSteam(g) && g.hours > 0);

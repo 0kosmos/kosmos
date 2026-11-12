@@ -34,7 +34,7 @@ interface Settings {
   accent: Accent; // color of buttons, switches and links
   librarySteam: boolean; // show Steam games in the Library
   libraryEpic: boolean; // show games installed with the Epic Games Launcher
-  storeEpic: boolean; // Epic Games free games in the Store (Steam is always shown)
+  storeEpicFree: boolean; // Epic Games free games in the Store (off unless turned on; Steam is always shown)
   statusBar: boolean; // thin bar at the bottom: time, version, CPU and memory
   timeZone: string; // time zone for the status bar clock, e.g. "Europe/Rome" ("" = this PC's)
   sidebarWidth: number; // px, dragged with the handle on the sidebar's right edge
@@ -51,7 +51,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", librarySteam: true, libraryEpic: true, storeEpic: true, statusBar: true, timeZone: "", sidebarWidth: SIDEBAR_MIN };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", librarySteam: true, libraryEpic: true, storeEpicFree: false, statusBar: true, timeZone: "", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -90,7 +90,7 @@ function load(): Settings {
       theme,
       librarySteam: saved.librarySteam !== false,
       libraryEpic: saved.libraryEpic !== false,
-      storeEpic: saved.storeEpic !== false,
+      storeEpicFree: saved.storeEpicFree === true,
       statusBar: saved.statusBar !== false,
       timeZone: validZone(saved.timeZone) ? saved.timeZone : "",
       accent: ACCENTS.some((a) => a.id === saved.accent) ? saved.accent : "mono",
@@ -188,7 +188,7 @@ export function setTimeZone(zone: string) {
   save();
 }
 export function setStoreEpic(on: boolean) {
-  settings.storeEpic = on;
+  settings.storeEpicFree = on;
   save();
 }
 export function setLiveStats(on: boolean) {

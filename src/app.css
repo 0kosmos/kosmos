@@ -17,6 +17,7 @@
   --on-accent: #000000; /* text drawn on top of the accent color */
   --good: #6fcf8e;
   --warn: #fb923c; /* orange: things that need attention, like updates */
+  --fav: #facc15; /* gold: favorite games */
   --bad: #f87171;
   --knob: #ffffff; /* the dot inside on/off switches when they're off */
 
@@ -47,6 +48,7 @@
   --on-accent: #ffffff;
   --good: #16a34a;
   --warn: #ea580c;
+  --fav: #d4a106;
   --bad: #dc2626;
   --knob: #ffffff;
   --hover: rgba(0, 0, 0, 0.04);
