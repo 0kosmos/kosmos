@@ -10,6 +10,12 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: "0.5.0",
+    new: ["Support Kosmos: a small link at the bottom of the sidebar to support the app on Ko-fi, if you like it."],
+    improved: ["New installs start with the tabs in a clearer order: Library, Downloads, Store, Market, Inventory, Friends, Groups, Screenshots."],
+    fixed: [],
+  },
+  {
     version: "0.4.0",
     new: ["Two new themes: Dark grey and Grey, next to Black and White (Settings → General)."],
     improved: ["Accent colors adjust to every theme, so buttons stay easy to read on the grey themes too."],

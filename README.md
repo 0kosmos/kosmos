@@ -31,6 +31,10 @@ Kosmos is built to run smoothly on lower-end PCs too. It installs small, uses li
 - **Your way:** four themes (Black, Dark grey, Grey, White), 12 accent colors, and a sidebar you can reorder and resize
 - **Always up to date:** Kosmos tells you when a new version is out, updates in one click, and shows what's new
 
+## Support Kosmos
+
+Kosmos is free and always will be. If you enjoy it, you can [buy me a coffee on Ko-fi](https://ko-fi.com/0kosmos) ♥
+
 ## Safe
 
 You sign in on Steam's own website. Kosmos never sees your password and never touches your games.

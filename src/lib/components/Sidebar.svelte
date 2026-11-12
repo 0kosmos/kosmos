@@ -60,6 +60,8 @@
   function openMyProfile() {
     openUrl(`steam://openurl/https://steamcommunity.com/profiles/${account.steamid}/`).catch(() => {});
   }
+  const KOFI = "https://ko-fi.com/0kosmos";
+  const HEART = "M12 20s-7-4.4-9-9A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9 5c-2 4.6-9 9-9 9z";
   const USER = "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8";
 
   // Live stats: only while the option is on and a game is running (paused when Kosmos is hidden)
@@ -297,6 +299,11 @@
 
   <!-- Bottom group: My PC and Settings -->
   <div class="footer">
+  <!-- Support Kosmos: opens the Ko-fi page in your browser (payments happen there, never in Kosmos) -->
+  <button class="support" onclick={() => openUrl(KOFI).catch(() => {})} title="Kosmos is free. If you like it, you can support it on Ko-fi">
+    <Icon d={HEART} />
+    <span>Support Kosmos</span>
+  </button>
   <!-- My PC: collapsible, info read once from Windows -->
   <div class="pc">
     <button class="pc-head" onclick={togglePcPanel} aria-expanded={pc.open}>
@@ -497,6 +504,15 @@
     transition: background 0.15s, color 0.15s;
   }
   .pc-head:hover { background: var(--hover); color: var(--text); }
+  /* Same look as My PC; the heart is pink */
+  .support {
+    width: 100%; display: flex; align-items: center; gap: 11px; padding: 7px 10px;
+    background: transparent; border: none; border-radius: var(--radius-sm);
+    color: var(--text-dim); font-size: var(--fs-md); font-weight: 500; text-align: left;
+    transition: background 0.15s, color 0.15s;
+  }
+  .support :global(svg) { color: var(--heart); }
+  .support:hover { background: var(--hover); color: var(--text); }
   .pc-head :global(svg) { opacity: 0.85; }
   .chev { margin-left: auto; transition: transform 0.15s; }
   .chev.open { transform: rotate(90deg); }
