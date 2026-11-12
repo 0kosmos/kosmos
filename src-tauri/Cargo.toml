@@ -23,6 +23,7 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-deep-link = "2"
+tauri-plugin-process = "2"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
@@ -51,3 +52,6 @@ windows-sys = { version = "0.61", features = [
   "Win32_System_ProcessStatus",      # a program's memory use (live game stats)
   "Win32_System_Performance",        # Windows' GPU counters (live game stats)
 ] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"

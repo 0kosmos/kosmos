@@ -11,10 +11,10 @@
 #[derive(serde::Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GameStats {
-    found: bool,         // false = no running program from the game's folder
-    cpu: Option<f32>,    // % of the whole CPU (None on the first check)
+    found: bool,      // false = no running program from the game's folder
+    cpu: Option<f32>, // % of the whole CPU (None on the first check)
     ram_mb: u64,
-    gpu: Option<f32>,    // % (None if Windows' GPU counters aren't available)
+    gpu: Option<f32>, // % (None if Windows' GPU counters aren't available)
     vram_mb: Option<u64>,
 }
 
@@ -26,15 +26,18 @@ mod imp {
     use std::time::{Duration, Instant};
     use windows_sys::Win32::Foundation::{CloseHandle, FILETIME, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+        CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW,
+        TH32CS_SNAPPROCESS,
     };
     use windows_sys::Win32::System::Performance::{
-        PdhAddEnglishCounterW, PdhCollectQueryData, PdhGetFormattedCounterArrayW, PdhOpenQueryW,
-        PDH_FMT_COUNTERVALUE_ITEM_W, PDH_FMT_DOUBLE, PDH_FMT_LARGE,
+        PDH_FMT_COUNTERVALUE_ITEM_W, PDH_FMT_DOUBLE, PDH_FMT_LARGE, PdhAddEnglishCounterW,
+        PdhCollectQueryData, PdhGetFormattedCounterArrayW, PdhOpenQueryW,
     };
-    use windows_sys::Win32::System::ProcessStatus::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
+    use windows_sys::Win32::System::ProcessStatus::{
+        K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+    };
     use windows_sys::Win32::System::Threading::{
-        GetProcessTimes, OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
+        GetProcessTimes, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
     };
 
     const PDH_MORE_DATA: u32 = 0x8000_07D2;
@@ -51,9 +54,9 @@ mod imp {
     #[derive(Default)]
     struct Monitor {
         appid: u32,
-        folder: String,              // lowercased install folder + "\"
+        folder: String, // lowercased install folder + "\"
         pids: Vec<u32>,
-        pids_at: Option<Instant>,    // when we last looked for the game's programs
+        pids_at: Option<Instant>, // when we last looked for the game's programs
         last_cpu: HashMap<u32, u64>, // pid -> CPU time (100 ns units) at the last check
         last_at: Option<Instant>,
         pdh: Option<Pdh>,
@@ -109,14 +112,22 @@ mod imp {
         if h.is_null() {
             return None;
         }
-        let z = FILETIME { dwLowDateTime: 0, dwHighDateTime: 0 };
+        let z = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
         let (mut c, mut x, mut k, mut u) = (z, z, z, z);
         let times_ok = unsafe { GetProcessTimes(h, &mut c, &mut x, &mut k, &mut u) } != 0;
         let mut mem: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
         mem.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
         let mem_ok = unsafe { K32GetProcessMemoryInfo(h, &mut mem, mem.cb) } != 0;
         unsafe { CloseHandle(h) };
-        times_ok.then(|| (ft(k) + ft(u), if mem_ok { mem.WorkingSetSize as u64 } else { 0 }))
+        times_ok.then(|| {
+            (
+                ft(k) + ft(u),
+                if mem_ok { mem.WorkingSetSize as u64 } else { 0 },
+            )
+        })
     }
 
     fn open_pdh() -> Option<Pdh> {
@@ -133,7 +144,11 @@ mod imp {
         let engine = add(r"\GPU Engine(*)\Utilization Percentage")?;
         let memory = add(r"\GPU Process Memory(*)\Dedicated Usage")?;
         unsafe { PdhCollectQueryData(query) }; // first sample; GPU % needs two
-        Some(Pdh { engine, memory, query })
+        Some(Pdh {
+            engine,
+            memory,
+            query,
+        })
     }
 
     /// Every instance of a counter as (instance name, value).
@@ -141,7 +156,13 @@ mod imp {
         let mut size = 0u32;
         let mut count = 0u32;
         let r = unsafe {
-            PdhGetFormattedCounterArrayW(counter, format, &mut size, &mut count, std::ptr::null_mut())
+            PdhGetFormattedCounterArrayW(
+                counter,
+                format,
+                &mut size,
+                &mut count,
+                std::ptr::null_mut(),
+            )
         };
         if r != PDH_MORE_DATA || size == 0 {
             return Vec::new();
@@ -149,14 +170,20 @@ mod imp {
         // Buffer of u64s so the items inside are properly aligned
         let mut buf = vec![0u64; (size as usize).div_ceil(8)];
         let items = buf.as_mut_ptr() as *mut PDH_FMT_COUNTERVALUE_ITEM_W;
-        if unsafe { PdhGetFormattedCounterArrayW(counter, format, &mut size, &mut count, items) } != 0 {
+        if unsafe { PdhGetFormattedCounterArrayW(counter, format, &mut size, &mut count, items) }
+            != 0
+        {
             return Vec::new();
         }
         (0..count as usize)
             .map(|i| unsafe {
                 let it = &*items.add(i);
                 let name = widestr(it.szName);
-                (name, it.FmtValue.Anonymous.doubleValue, it.FmtValue.Anonymous.largeValue)
+                (
+                    name,
+                    it.FmtValue.Anonymous.doubleValue,
+                    it.FmtValue.Anonymous.largeValue,
+                )
             })
             .collect()
     }
@@ -194,12 +221,19 @@ mod imp {
             if !folder.ends_with('\\') {
                 folder.push('\\');
             }
-            *guard = Some(Monitor { appid: key, folder, ..Default::default() });
+            *guard = Some(Monitor {
+                appid: key,
+                folder,
+                ..Default::default()
+            });
         }
         let m = guard.as_mut().unwrap();
 
         // Look for the game's programs again every 10 s (games sometimes start helper programs)
-        if m.pids.is_empty() || m.pids_at.is_none_or(|t| t.elapsed() > Duration::from_secs(10)) {
+        if m.pids.is_empty()
+            || m.pids_at
+                .is_none_or(|t| t.elapsed() > Duration::from_secs(10))
+        {
             m.pids = find_pids(&m.folder);
             m.pids_at = Some(Instant::now());
         }
@@ -209,7 +243,9 @@ mod imp {
 
         // CPU and RAM
         let now = Instant::now();
-        let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1) as f64;
+        let threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1) as f64;
         let mut ram = 0u64;
         let mut cpu_delta = 0u64;
         let mut had_previous = false;
@@ -260,7 +296,13 @@ mod imp {
             }
         }
 
-        GameStats { found: true, cpu, ram_mb: ram / (1024 * 1024), gpu, vram_mb: vram }
+        GameStats {
+            found: true,
+            cpu,
+            ram_mb: ram / (1024 * 1024),
+            gpu,
+            vram_mb: vram,
+        }
     }
 
     /// Stop tracking (game closed or stats switched off). Frees Windows' counters.
@@ -305,7 +347,12 @@ mod tests {
             let s = super::imp::stats_for_folder(1, steam);
             println!(
                 "check {i}: {:>6.1?}  found={} cpu={:?} ram={} MB gpu={:?} vram={:?} MB",
-                t.elapsed(), s.found, s.cpu, s.ram_mb, s.gpu, s.vram_mb
+                t.elapsed(),
+                s.found,
+                s.cpu,
+                s.ram_mb,
+                s.gpu,
+                s.vram_mb
             );
             std::thread::sleep(std::time::Duration::from_secs(2));
         }

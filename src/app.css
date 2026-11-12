@@ -31,6 +31,7 @@
   --fs-sm: 0.82rem;
   --fs-md: 0.92rem;
   --sidebar-w: 220px;
+  --statusbar-h: 26px; /* 0px when the status bar is turned off */
   font-family: system-ui, "Segoe UI Variable", "Segoe UI", sans-serif;
   color-scheme: dark;
 }

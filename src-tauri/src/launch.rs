@@ -57,7 +57,10 @@ pub(crate) fn steam_libraries() -> Vec<PathBuf> {
     if let Ok(text) = std::fs::read_to_string(steam.join(r"steamapps\libraryfolders.vdf")) {
         for p in vdf_values(&text, "path") {
             let p = PathBuf::from(p);
-            if !libs.iter().any(|l| l.to_string_lossy().eq_ignore_ascii_case(&p.to_string_lossy())) {
+            if !libs.iter().any(|l| {
+                l.to_string_lossy()
+                    .eq_ignore_ascii_case(&p.to_string_lossy())
+            }) {
                 libs.push(p);
             }
         }
@@ -73,8 +76,12 @@ pub(crate) fn steam_libraries() -> Vec<PathBuf> {
 /// Where a game is installed and how big it is, from its appmanifest file.
 pub(crate) fn find_install(appid: u32) -> Option<(PathBuf, u64)> {
     for lib in steam_libraries() {
-        let manifest = lib.join("steamapps").join(format!("appmanifest_{appid}.acf"));
-        let Ok(text) = std::fs::read_to_string(&manifest) else { continue };
+        let manifest = lib
+            .join("steamapps")
+            .join(format!("appmanifest_{appid}.acf"));
+        let Ok(text) = std::fs::read_to_string(&manifest) else {
+            continue;
+        };
         let dir = vdf_values(&text, "installdir").into_iter().next()?;
         let size = vdf_values(&text, "SizeOnDisk")
             .into_iter()
@@ -123,7 +130,10 @@ fn drive_kind(path: &Path) -> String {
     }
 
     // e.g. \\.\C:  (plus the end-of-text marker Windows expects)
-    let device: Vec<u16> = format!(r"\\.\{letter}:").encode_utf16().chain(Some(0)).collect();
+    let device: Vec<u16> = format!(r"\\.\{letter}:")
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
     let handle = unsafe {
         CreateFileW(
             device.as_ptr(),
@@ -192,7 +202,11 @@ fn drive_kind(_path: &Path) -> String {
 #[tauri::command]
 pub fn launch_inputs(appid: u32) -> LaunchInputs {
     match find_install(appid) {
-        Some((dir, size)) => LaunchInputs { installed: true, size_bytes: size, drive: drive_kind(&dir) },
+        Some((dir, size)) => LaunchInputs {
+            installed: true,
+            size_bytes: size,
+            drive: drive_kind(&dir),
+        },
         None => LaunchInputs::default(),
     }
 }
@@ -200,7 +214,9 @@ pub fn launch_inputs(appid: u32) -> LaunchInputs {
 /// CPU threads and RAM (read once; the app remembers it).
 #[tauri::command]
 pub fn system_info() -> SystemInfo {
-    let cpu_threads = std::thread::available_parallelism().map(|n| n.get() as u32).unwrap_or(0);
+    let cpu_threads = std::thread::available_parallelism()
+        .map(|n| n.get() as u32)
+        .unwrap_or(0);
     #[cfg(windows)]
     let ram_gb = {
         use windows_sys::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
@@ -214,7 +230,10 @@ pub fn system_info() -> SystemInfo {
     };
     #[cfg(not(windows))]
     let ram_gb = 0;
-    SystemInfo { cpu_threads, ram_gb }
+    SystemInfo {
+        cpu_threads,
+        ram_gb,
+    }
 }
 
 /// Program (full path) that owns the window currently in front.
@@ -222,9 +241,11 @@ pub fn system_info() -> SystemInfo {
 fn foreground_exe() -> Option<String> {
     use windows_sys::Win32::Foundation::CloseHandle;
     use windows_sys::Win32::System::Threading::{
-        OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
+        OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
     };
-    use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowThreadProcessId,
+    };
 
     let window = unsafe { GetForegroundWindow() };
     if window.is_null() {
@@ -258,7 +279,9 @@ pub fn measure_launch(app: tauri::AppHandle, appid: u32) {
 
         let start = Instant::now();
         std::thread::spawn(move || {
-            let Some((dir, _)) = find_install(appid) else { return };
+            let Some((dir, _)) = find_install(appid) else {
+                return;
+            };
             let mut prefix = dir.to_string_lossy().to_lowercase();
             if !prefix.ends_with('\\') {
                 prefix.push('\\');
@@ -297,10 +320,16 @@ mod tests {
     #[test]
     fn real_machine_info() {
         // Prints what this PC reports (run with: cargo test -- --nocapture)
-        println!("system: {:?}", serde_json::to_string(&system_info()).unwrap());
+        println!(
+            "system: {:?}",
+            serde_json::to_string(&system_info()).unwrap()
+        );
         println!("C: drive = {}", drive_kind(Path::new("C:\\")));
         for id in [105600u32, 730, 3513350] {
-            println!("{id}: {}", serde_json::to_string(&launch_inputs(id)).unwrap());
+            println!(
+                "{id}: {}",
+                serde_json::to_string(&launch_inputs(id)).unwrap()
+            );
         }
     }
 }

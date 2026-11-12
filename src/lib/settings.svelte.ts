@@ -35,6 +35,8 @@ interface Settings {
   librarySteam: boolean; // show Steam games in the Library
   libraryEpic: boolean; // show games installed with the Epic Games Launcher
   storeEpic: boolean; // Epic Games free games in the Store (Steam is always shown)
+  statusBar: boolean; // thin bar at the bottom: time, version, CPU and memory
+  timeZone: string; // time zone for the status bar clock, e.g. "Europe/Rome" ("" = this PC's)
   sidebarWidth: number; // px, dragged with the handle on the sidebar's right edge
 }
 
@@ -49,7 +51,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", librarySteam: true, libraryEpic: true, storeEpic: true, sidebarWidth: SIDEBAR_MIN };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", librarySteam: true, libraryEpic: true, storeEpic: true, statusBar: true, timeZone: "", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -89,6 +91,8 @@ function load(): Settings {
       librarySteam: saved.librarySteam !== false,
       libraryEpic: saved.libraryEpic !== false,
       storeEpic: saved.storeEpic !== false,
+      statusBar: saved.statusBar !== false,
+      timeZone: validZone(saved.timeZone) ? saved.timeZone : "",
       accent: ACCENTS.some((a) => a.id === saved.accent) ? saved.accent : "mono",
       sidebarWidth: clampSidebar(Number(saved.sidebarWidth) || SIDEBAR_MIN),
       liveStats: !!saved.liveStats,
@@ -163,6 +167,24 @@ export function setAccent(accent: Accent) {
 export function setLibrarySource(source: "steam" | "epic", on: boolean) {
   if (source === "steam") settings.librarySteam = on;
   else settings.libraryEpic = on;
+  save();
+}
+/** Is this a time zone Windows / the browser knows? */
+function validZone(z: unknown): z is string {
+  if (typeof z !== "string" || !z) return false;
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: z });
+    return true;
+  } catch {
+    return false;
+  }
+}
+export function setStatusBar(on: boolean) {
+  settings.statusBar = on;
+  save();
+}
+export function setTimeZone(zone: string) {
+  settings.timeZone = validZone(zone) ? zone : "";
   save();
 }
 export function setStoreEpic(on: boolean) {

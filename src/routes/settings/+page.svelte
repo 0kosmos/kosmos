@@ -10,6 +10,8 @@
     setCloseToTray,
     setTheme,
     setAccent,
+    setStatusBar,
+    setTimeZone,
     ACCENTS,
     setStoreRegion,
     toggleStoreExclude,
@@ -124,6 +126,15 @@
     [2, "Frequent Violence or Gore", "Games with a lot of violence or gore"],
     [5, "General Mature Content", "Other mature themes, suitable for adults only"],
   ];
+
+  // Every time zone this PC knows (e.g. "Europe/Rome"), for the status bar clock
+  const TIME_ZONES: string[] = (() => {
+    try {
+      return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone");
+    } catch {
+      return [];
+    }
+  })();
 </script>
 
 <h1>Settings</h1>
@@ -169,6 +180,31 @@
             ></button>
           {/each}
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Status bar</h2>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Show status bar</strong>
+          <p class="dim">The thin bar at the bottom: time, Kosmos's version, and how much CPU and memory Kosmos uses.</p>
+        </div>
+        <button class="switch" role="switch" aria-checked={settings.statusBar} aria-label="Show status bar" onclick={() => setStatusBar(!settings.statusBar)}>
+          <span class="knob"></span>
+        </button>
+      </div>
+      <div class="row">
+        <div>
+          <strong>Time zone</strong>
+          <p class="dim">Which time the status bar shows. Automatic uses this PC's time.</p>
+        </div>
+        <select value={settings.timeZone} onchange={(e) => setTimeZone(e.currentTarget.value)} aria-label="Time zone">
+          <option value="">Automatic (this PC)</option>
+          {#each TIME_ZONES as z (z)}<option value={z}>{z.replace(/_/g, " ")}</option>{/each}
+        </select>
       </div>
     </div>
   </section>

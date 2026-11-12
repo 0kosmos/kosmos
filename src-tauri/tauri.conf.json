@@ -26,7 +26,19 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["kosmos"]
+        "schemes": [
+          "kosmos"
+        ]
+      }
+    },
+    "updater": {
+      "requireSignedVersion": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM1MzY0MzU5OUFCNzM3RkYKUldUL043ZWFXVU0yTlgxcnh6Yis1TTR0a25lWmpoTzZad2V6MHN2VjdaazRQQnJrODVRdkZnakEK",
+      "endpoints": [
+        "https://github.com/0kosmos/kosmos/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   },
@@ -39,6 +51,7 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
   }
 }

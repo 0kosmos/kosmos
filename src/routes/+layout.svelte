@@ -9,6 +9,7 @@
   import { watchPlaying } from "$lib/playing.svelte";
   import { listenForLaunchTimes, hideLaunchTip } from "$lib/launchTime.svelte";
   import LaunchTip from "$lib/components/LaunchTip.svelte";
+  import StatusBar from "$lib/components/StatusBar.svelte";
   import { invoke } from "@tauri-apps/api/core";
 
   // Tell the Rust side what X should do (and show/hide the tray icon) at start and on change
@@ -43,18 +44,27 @@
   $effect(() => {
     document.documentElement.style.setProperty("--sidebar-w", settings.sidebarWidth + "px");
   });
+
+  // Height of the status bar, so full-height pages (like the Library) leave room for it
+  $effect(() => {
+    document.documentElement.style.setProperty("--statusbar-h", settings.statusBar ? "26px" : "0px");
+  });
 </script>
 
 <div class="app">
   <Sidebar />
-  <main onwheel={hideLaunchTip}>
-    {#if isOff}
-      <h1>This tab is turned off</h1>
-      <p class="dim">You can turn it back on in Settings.</p>
-    {:else}
-      {@render children()}
-    {/if}
-  </main>
+  <!-- Page on top, status bar below it: the page scrolls on its own, so nothing hides behind the bar -->
+  <div class="right">
+    <main onwheel={hideLaunchTip}>
+      {#if isOff}
+        <h1>This tab is turned off</h1>
+        <p class="dim">You can turn it back on in Settings.</p>
+      {:else}
+        {@render children()}
+      {/if}
+    </main>
+    {#if settings.statusBar}<StatusBar />{/if}
+  </div>
 </div>
 
 <!-- Launch-time tooltip for Play buttons (only drawn while hovering one) -->
@@ -68,7 +78,15 @@
     grid-template-columns: max(220px, min(var(--sidebar-w), calc(100vw - 590px))) 1fr;
     height: 100vh;
   }
+  .right {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
   main {
+    flex: 1;
+    min-height: 0;
     padding: 28px 32px;
     overflow-y: auto;
   }

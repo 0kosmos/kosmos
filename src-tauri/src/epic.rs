@@ -54,8 +54,12 @@ fn installed_games(dir: &Path) -> Vec<EpicGame> {
         if path.extension().and_then(|e| e.to_str()) != Some("item") {
             continue;
         }
-        let Ok(text) = std::fs::read_to_string(&path) else { continue };
-        let Ok(v) = serde_json::from_str::<Value>(&text) else { continue };
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(v) = serde_json::from_str::<Value>(&text) else {
+            continue;
+        };
 
         // Skip half-finished installs, add-ons (DLC point to a main game), and things that
         // aren't games (Unreal Engine, plugins...)
@@ -63,7 +67,10 @@ fn installed_games(dir: &Path) -> Vec<EpicGame> {
             .get("AppCategories")
             .and_then(|c| c.as_array())
             .is_some_and(|c| c.iter().any(|x| x.as_str() == Some("games")));
-        let incomplete = v.get("bIsIncompleteInstall").and_then(|x| x.as_bool()).unwrap_or(false);
+        let incomplete = v
+            .get("bIsIncompleteInstall")
+            .and_then(|x| x.as_bool())
+            .unwrap_or(false);
         if !is_game || !str_of(&v, "MainGameAppName").is_empty() {
             continue;
         }
@@ -77,7 +84,11 @@ fn installed_games(dir: &Path) -> Vec<EpicGame> {
         }
         let display = str_of(&v, "DisplayName");
         games.push(EpicGame {
-            name: if display.is_empty() { app_name.clone() } else { display },
+            name: if display.is_empty() {
+                app_name.clone()
+            } else {
+                display
+            },
             app_name,
             namespace: str_of(&v, "CatalogNamespace"),
             item_id: str_of(&v, "CatalogItemId"),
@@ -97,7 +108,9 @@ fn owned_games(dir: &Path) -> Vec<EpicGame> {
     let Ok(raw) = std::fs::read(dir.join(r"Catalog\catcache.bin")) else {
         return Vec::new();
     };
-    let Some(bytes) = base64_decode(&raw) else { return Vec::new() };
+    let Some(bytes) = base64_decode(&raw) else {
+        return Vec::new();
+    };
     let Ok(Value::Array(items)) = serde_json::from_slice::<Value>(&bytes) else {
         return Vec::new();
     };
@@ -107,26 +120,37 @@ fn owned_games(dir: &Path) -> Vec<EpicGame> {
         let cats: Vec<&str> = it
             .get("categories")
             .and_then(|c| c.as_array())
-            .map(|c| c.iter().filter_map(|x| x.get("path").and_then(|p| p.as_str())).collect())
+            .map(|c| {
+                c.iter()
+                    .filter_map(|x| x.get("path").and_then(|p| p.as_str()))
+                    .collect()
+            })
             .unwrap_or_default();
         // Only games: not apps (Unreal Engine...), not extras (soundtracks, art books)
         if !cats.contains(&"games") || cats.contains(&"digitalextras") {
             continue;
         }
         // Add-ons point to their main game
-        let main_id = it.get("mainGameItem").map(|m| str_of(m, "id")).unwrap_or_default();
+        let main_id = it
+            .get("mainGameItem")
+            .map(|m| str_of(m, "id"))
+            .unwrap_or_default();
         if !main_id.is_empty() {
             continue;
         }
         // The Windows version (skips phone-only games)
-        let Some(release) = it.get("releaseInfo").and_then(|r| r.as_array()).and_then(|r| {
-            r.iter().find(|x| {
-                !str_of(x, "appId").is_empty()
-                    && x.get("platform")
-                        .and_then(|p| p.as_array())
-                        .is_some_and(|p| p.iter().any(|s| s.as_str() == Some("Windows")))
+        let Some(release) = it
+            .get("releaseInfo")
+            .and_then(|r| r.as_array())
+            .and_then(|r| {
+                r.iter().find(|x| {
+                    !str_of(x, "appId").is_empty()
+                        && x.get("platform")
+                            .and_then(|p| p.as_array())
+                            .is_some_and(|p| p.iter().any(|s| s.as_str() == Some("Windows")))
+                })
             })
-        }) else {
+        else {
             continue;
         };
         let app_name = str_of(release, "appId");
@@ -140,7 +164,9 @@ fn owned_games(dir: &Path) -> Vec<EpicGame> {
                 .and_then(|list| list.iter().find(|i| str_of(i, "type") == kind))
                 .map(|i| str_of(i, "url"))
         };
-        let cover = image("DieselGameBoxTall").or_else(|| image("DieselGameBox")).unwrap_or_default();
+        let cover = image("DieselGameBoxTall")
+            .or_else(|| image("DieselGameBox"))
+            .unwrap_or_default();
         let wide = image("DieselGameBox").unwrap_or_default();
 
         games.push(EpicGame {
@@ -190,7 +216,10 @@ use std::time::{Duration, Instant};
 
 /// IDs and page names are letters, digits, "-", "_" and "." only
 fn safe(s: &str) -> bool {
-    !s.is_empty() && s.len() <= 160 && s.chars().all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c))
+    !s.is_empty()
+        && s.len() <= 160
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c))
 }
 
 fn open(url: &str) -> Result<(), String> {
@@ -203,7 +232,9 @@ fn send_to_launcher(url: String) -> Result<String, String> {
     #[cfg(windows)]
     if win::launcher_pids().is_empty() {
         if let Some(exe) = win::launcher_exe() {
-            std::process::Command::new(&exe).spawn().map_err(|e| e.to_string())?;
+            std::process::Command::new(&exe)
+                .spawn()
+                .map_err(|e| e.to_string())?;
             std::thread::spawn(move || {
                 // Wait up to 90 s for the launcher's window, then give it a moment to finish loading
                 let start = Instant::now();
@@ -225,8 +256,15 @@ fn send_to_launcher(url: String) -> Result<String, String> {
 
 /// Start or install a game through the Epic launcher. action: "launch" or "install"
 #[tauri::command(async)]
-pub fn epic_app(action: String, namespace: String, item_id: String, app_name: String) -> Result<String, String> {
-    if !matches!(action.as_str(), "launch" | "install") || ![&namespace, &item_id, &app_name].iter().all(|s| safe(s)) {
+pub fn epic_app(
+    action: String,
+    namespace: String,
+    item_id: String,
+    app_name: String,
+) -> Result<String, String> {
+    if !matches!(action.as_str(), "launch" | "install")
+        || ![&namespace, &item_id, &app_name].iter().all(|s| safe(s))
+    {
         return Err("Unknown game".into());
     }
     send_to_launcher(format!(
@@ -244,14 +282,25 @@ pub fn epic_app(action: String, namespace: String, item_id: String, app_name: St
 pub fn epic_page(page: String, slug: Option<String>) -> Result<String, String> {
     match (page.as_str(), slug) {
         ("library", _) => send_to_launcher("com.epicgames.launcher://library".into()),
-        ("store", Some(s)) if safe(&s) => open(&format!("https://store.epicgames.com/p/{s}")).map(|_| "sent".into()),
+        ("store", Some(s)) if safe(&s) => {
+            open(&format!("https://store.epicgames.com/p/{s}")).map(|_| "sent".into())
+        }
         ("search", Some(name)) if !name.is_empty() && name.len() <= 200 => {
             // Encode everything except letters and digits (spaces, ":", "'", accents...)
             let q: String = name
                 .bytes()
-                .map(|b| if b.is_ascii_alphanumeric() { (b as char).to_string() } else { format!("%{b:02X}") })
+                .map(|b| {
+                    if b.is_ascii_alphanumeric() {
+                        (b as char).to_string()
+                    } else {
+                        format!("%{b:02X}")
+                    }
+                })
                 .collect();
-            open(&format!("https://store.epicgames.com/browse?q={q}&sortBy=relevancy&sortDir=DESC")).map(|_| "sent".into())
+            open(&format!(
+                "https://store.epicgames.com/browse?q={q}&sortBy=relevancy&sortDir=DESC"
+            ))
+            .map(|_| "sent".into())
         }
         _ => Err("Unknown page".into()),
     }
@@ -261,7 +310,8 @@ pub fn epic_page(page: String, slug: Option<String>) -> Result<String, String> {
 mod win {
     use windows_sys::Win32::Foundation::{CloseHandle, HWND, INVALID_HANDLE_VALUE, LPARAM};
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+        CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW,
+        TH32CS_SNAPPROCESS,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible,
@@ -278,7 +328,11 @@ mod win {
         e.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
         let mut ok = unsafe { Process32FirstW(snap, &mut e) };
         while ok != 0 {
-            let len = e.szExeFile.iter().position(|&c| c == 0).unwrap_or(e.szExeFile.len());
+            let len = e
+                .szExeFile
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(e.szExeFile.len());
             let name = String::from_utf16_lossy(&e.szExeFile[..len]);
             if name.eq_ignore_ascii_case("EpicGamesLauncher.exe") {
                 out.push(e.th32ProcessID);
@@ -299,13 +353,19 @@ mod win {
             let s = unsafe { &mut *(data as *mut Search) };
             let mut pid = 0u32;
             unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
-            if s.pids.contains(&pid) && unsafe { IsWindowVisible(hwnd) } != 0 && unsafe { GetWindowTextLengthW(hwnd) } > 0 {
+            if s.pids.contains(&pid)
+                && unsafe { IsWindowVisible(hwnd) } != 0
+                && unsafe { GetWindowTextLengthW(hwnd) } > 0
+            {
                 s.found = true;
                 return 0; // stop looking
             }
             1
         }
-        let mut s = Search { pids: launcher_pids(), found: false };
+        let mut s = Search {
+            pids: launcher_pids(),
+            found: false,
+        };
         if s.pids.is_empty() {
             return false;
         }
@@ -365,6 +425,10 @@ mod tests {
     #[test]
     fn finds_launcher() {
         println!("exe: {:?}", super::win::launcher_exe());
-        println!("running: {:?} window: {}", super::win::launcher_pids(), super::win::launcher_window_up());
+        println!(
+            "running: {:?} window: {}",
+            super::win::launcher_pids(),
+            super::win::launcher_window_up()
+        );
     }
 }

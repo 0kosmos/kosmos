@@ -511,7 +511,7 @@
   .results { min-width: 0; }
 
   .filters {
-    position: sticky; top: 0; max-height: calc(100vh - 80px); overflow-y: auto;
+    position: sticky; top: 0; max-height: calc(100vh - 80px - var(--statusbar-h, 0px)); overflow-y: auto;
     padding: 12px 14px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   }
   .filters.overlay {

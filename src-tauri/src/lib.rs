@@ -1,4 +1,4 @@
-
+mod appstats;
 mod downloads;
 mod epic;
 mod launch;
@@ -51,8 +51,8 @@ fn watch_running_app(app: tauri::AppHandle) {
     use tauri::Emitter;
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
-        RegCloseKey, RegNotifyChangeKeyValue, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, KEY_NOTIFY,
-        REG_NOTIFY_CHANGE_LAST_SET,
+        HKEY, HKEY_CURRENT_USER, KEY_NOTIFY, REG_NOTIFY_CHANGE_LAST_SET, RegCloseKey,
+        RegNotifyChangeKeyValue, RegOpenKeyExW,
     };
 
     std::thread::spawn(move || {
@@ -70,7 +70,13 @@ fn watch_running_app(app: tauri::AppHandle) {
             loop {
                 // Sleeps until a value in Steam's key changes (no CPU used while waiting)
                 let r = unsafe {
-                    RegNotifyChangeKeyValue(key, 0, REG_NOTIFY_CHANGE_LAST_SET, std::ptr::null_mut(), 0)
+                    RegNotifyChangeKeyValue(
+                        key,
+                        0,
+                        REG_NOTIFY_CHANGE_LAST_SET,
+                        std::ptr::null_mut(),
+                        0,
+                    )
                 };
                 if r != ERROR_SUCCESS {
                     break;
@@ -105,8 +111,12 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        // Updates: checks the latest release on GitHub; "process" restarts Kosmos afterwards
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             running_app,
+            appstats::app_usage,
             launch::launch_inputs,
             launch::system_info,
             launch::measure_launch,

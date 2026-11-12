@@ -224,7 +224,7 @@
 
 <style>
   .page {
-    height: calc(100vh - 56px);
+    height: calc(100vh - 56px - var(--statusbar-h, 0px));
     display: flex;
     flex-direction: column;
   }

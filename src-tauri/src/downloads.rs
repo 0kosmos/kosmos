@@ -9,7 +9,7 @@ pub struct InstalledGame {
     appid: u32,
     name: String,
     size_on_disk: u64,
-    library: String, // e.g. "C:\Program Files (x86)\Steam"
+    library: String,      // e.g. "C:\Program Files (x86)\Steam"
     status: &'static str, // "installed" | "update" | "downloading" | "paused"
     first_install: bool,  // true = not fully installed yet (an install, not an update)
     bytes_to_download: u64,
@@ -34,7 +34,9 @@ fn status_of(flags: u64, updating_now: bool, downloaded: u64, to_download: u64) 
         || flags & FULLY_INSTALLED == 0;
     if updating_now || flags & (UPDATE_RUNNING | DOWNLOADING | STAGING | COMMITTING) != 0 {
         "downloading"
-    } else if pending && (flags & UPDATE_PAUSED != 0 || (downloaded > 0 && downloaded < to_download)) {
+    } else if pending
+        && (flags & UPDATE_PAUSED != 0 || (downloaded > 0 && downloaded < to_download))
+    {
         "paused" // started but not running: paused, or removed from Steam's queue
     } else if pending {
         "update" // needs an update / install that hasn't started yet
@@ -58,7 +60,11 @@ fn updating_now(_appid: u32) -> bool {
 }
 
 fn first_num(text: &str, key: &str) -> u64 {
-    vdf_values(text, key).into_iter().next().and_then(|v| v.parse().ok()).unwrap_or(0)
+    vdf_values(text, key)
+        .into_iter()
+        .next()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
 }
 
 /// Every game Steam has installed (or is installing), across all library drives.
@@ -66,14 +72,18 @@ fn first_num(text: &str, key: &str) -> u64 {
 pub fn steam_installs() -> Vec<InstalledGame> {
     let mut out = Vec::new();
     for lib in steam_libraries() {
-        let Ok(entries) = std::fs::read_dir(lib.join("steamapps")) else { continue };
+        let Ok(entries) = std::fs::read_dir(lib.join("steamapps")) else {
+            continue;
+        };
         for entry in entries.flatten() {
             let file = entry.file_name();
             let file = file.to_string_lossy();
             if !(file.starts_with("appmanifest_") && file.ends_with(".acf")) {
                 continue;
             }
-            let Ok(text) = std::fs::read_to_string(entry.path()) else { continue };
+            let Ok(text) = std::fs::read_to_string(entry.path()) else {
+                continue;
+            };
             let appid = first_num(&text, "appid") as u32;
             if appid == 0 || appid == 228980 {
                 continue; // 228980 = "Steamworks Common Redistributables", not a game
@@ -81,12 +91,35 @@ pub fn steam_installs() -> Vec<InstalledGame> {
             let flags = first_num(&text, "StateFlags");
             let to_download = first_num(&text, "BytesToDownload");
             let downloaded = first_num(&text, "BytesDownloaded");
+            let updating = updating_now(appid);
+            // Uninstalled while it was still downloading: Steam can leave the install file
+            // behind ("paused", and even Installed = 1 in its registry), but the game's files
+            // and its partial download are gone. Then it isn't installed or installing anymore.
+            if flags & FULLY_INSTALLED == 0 && !updating && downloaded > 0 {
+                let dir = vdf_values(&text, "installdir")
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default();
+                let partial = lib
+                    .join("steamapps")
+                    .join("downloading")
+                    .join(appid.to_string());
+                if !partial.exists()
+                    && (dir.is_empty()
+                        || !has_files(&lib.join("steamapps").join("common").join(&dir)))
+                {
+                    continue;
+                }
+            }
             out.push(InstalledGame {
                 appid,
-                name: vdf_values(&text, "name").into_iter().next().unwrap_or_default(),
+                name: vdf_values(&text, "name")
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default(),
                 size_on_disk: first_num(&text, "SizeOnDisk"),
                 library: lib.to_string_lossy().into_owned(),
-                status: status_of(flags, updating_now(appid), downloaded, to_download),
+                status: status_of(flags, updating, downloaded, to_download),
                 first_install: flags & FULLY_INSTALLED == 0,
                 bytes_to_download: to_download,
                 bytes_downloaded: downloaded,
@@ -107,9 +140,15 @@ pub fn steam_folder_sizes(appids: Vec<u32>) -> Vec<(u32, u64)> {
     let mut out = Vec::new();
     for lib in steam_libraries() {
         for &appid in &appids {
-            let manifest = lib.join("steamapps").join(format!("appmanifest_{appid}.acf"));
-            let Ok(text) = std::fs::read_to_string(&manifest) else { continue };
-            let Some(dir) = vdf_values(&text, "installdir").into_iter().next() else { continue };
+            let manifest = lib
+                .join("steamapps")
+                .join(format!("appmanifest_{appid}.acf"));
+            let Ok(text) = std::fs::read_to_string(&manifest) else {
+                continue;
+            };
+            let Some(dir) = vdf_values(&text, "installdir").into_iter().next() else {
+                continue;
+            };
             // Only a plain folder name inside steamapps\common (never "..", never a full path)
             if dir.is_empty() || dir.contains(['/', '\\', ':']) || dir == ".." || dir == "." {
                 continue;
@@ -123,14 +162,36 @@ pub fn steam_folder_sizes(appids: Vec<u32>) -> Vec<(u32, u64)> {
     out
 }
 
+/// Is there at least one file in this folder or its subfolders? (stops at the first one)
+fn has_files(root: &std::path::Path) -> bool {
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            match entry.file_type() {
+                Ok(t) if t.is_file() => return true,
+                Ok(t) if t.is_dir() => stack.push(entry.path()),
+                _ => {}
+            }
+        }
+    }
+    false
+}
+
 /// Total size of all files in a folder and its subfolders (shortcuts/links are not followed)
 fn folder_size(root: &std::path::Path) -> u64 {
     let mut total = 0;
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.flatten() {
-            let Ok(meta) = std::fs::symlink_metadata(entry.path()) else { continue };
+            let Ok(meta) = std::fs::symlink_metadata(entry.path()) else {
+                continue;
+            };
             if meta.is_dir() {
                 stack.push(entry.path());
             } else if meta.is_file() {
@@ -164,7 +225,10 @@ pub fn install_states() -> Vec<InstallState> {
                 ("paused", false) => "update-paused",
                 _ => "ready", // installed, or installed with an update Steam will do on launch
             };
-            InstallState { appid: g.appid, state }
+            InstallState {
+                appid: g.appid,
+                state,
+            }
         })
         .collect()
 }
@@ -190,7 +254,14 @@ mod tests {
     #[test]
     fn real_machine() {
         for g in steam_installs() {
-            println!("{} {:?} {} MB {} first_install={}", g.appid, g.name, g.size_on_disk / 1_000_000, g.status, g.first_install);
+            println!(
+                "{} {:?} {} MB {} first_install={}",
+                g.appid,
+                g.name,
+                g.size_on_disk / 1_000_000,
+                g.status,
+                g.first_install
+            );
         }
         for s in install_states() {
             if s.state != "ready" {
@@ -199,4 +270,3 @@ mod tests {
         }
     }
 }
-
