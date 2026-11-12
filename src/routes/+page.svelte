@@ -10,6 +10,24 @@
   import { library, loadLibrary } from "$lib/library.svelte";
   import { view, saveView, clearFilters } from "$lib/libraryView.svelte";
   import FilterPanel from "$lib/components/FilterPanel.svelte";
+  import CustomTile from "$lib/components/CustomTile.svelte";
+  import CustomGameDialog from "$lib/components/CustomGameDialog.svelte";
+  import { custom, type CustomGame } from "$lib/customGames.svelte";
+  import { hidden, isHiddenGame } from "$lib/hidden.svelte";
+  import { open as openFile } from "@tauri-apps/plugin-dialog";
+
+  // ---------- Your own games: "+ Add game", then a window to name it and pick a picture ----------
+  let dialog = $state<{ path?: string; game?: CustomGame } | null>(null);
+  async function addOwnGame() {
+    const file = await openFile({
+      multiple: false,
+      directory: false,
+      title: "Add a game or app",
+      filters: [{ name: "Games and apps", extensions: ["exe", "lnk", "url"] }],
+    }).catch(() => null);
+    if (typeof file === "string") dialog = { path: file };
+  }
+  const editOwnGame = (g: CustomGame) => (dialog = { game: g });
   import LibraryNews from "$lib/components/LibraryNews.svelte";
 
   // News row: your 10 most recently played games (never the whole library)
@@ -76,7 +94,8 @@
   // out of the playtime and tag filters.
   type Item =
     | { kind: "steam"; key: string; name: string; hours: number; lastPlayed: number; steam: Game }
-    | { kind: "epic"; key: string; name: string; hours: number; lastPlayed: number; epic: EpicGame };
+    | { kind: "epic"; key: string; name: string; hours: number; lastPlayed: number; epic: EpicGame }
+    | { kind: "custom"; key: string; name: string; hours: number; lastPlayed: number; custom: CustomGame };
   const allItems = $derived<Item[]>([
     ...(settings.librarySteam
       ? library.games.map((g) => ({ kind: "steam" as const, key: "s" + g.appid, name: g.name, hours: g.hours, lastPlayed: g.lastPlayed, steam: g }))
@@ -84,19 +103,27 @@
     ...(settings.libraryEpic
       ? epic.games.map((g) => ({ kind: "epic" as const, key: "e" + g.appName, name: g.name, hours: 0, lastPlayed: 0, epic: g }))
       : []),
+    ...(settings.libraryCustom
+      ? custom.games.map((g) => ({ kind: "custom" as const, key: "c" + g.id, name: g.name, hours: 0, lastPlayed: 0, custom: g }))
+      : []),
   ]);
+  // Is it installed? Your own games always are (they're files on this PC)
+  const isInstalled = (it: Item) =>
+    it.kind === "steam" ? installed.states.has(it.steam.appid) : it.kind === "epic" ? it.epic.installed : true;
   const isSteam = (it: Item): it is Extract<Item, { kind: "steam" }> => it.kind === "steam";
 
   const games = $derived.by(() => {
     const q = view.query.trim().toLowerCase();
     let list = allItems.filter((g) => g.name.toLowerCase().includes(q));
+    // Hidden games only show while "Show hidden games" is ticked in the filters
+    if (!hidden.showInLibrary) list = list.filter((g) => !isHiddenGame(g.key));
 
     // Ticked filters: a game must match all of them
     const now = Date.now();
     for (const s of view.status) {
       if (s === "favorites") list = list.filter((g) => isFavorite(g.key));
-      if (s === "installed") list = list.filter((g) => (isSteam(g) ? installed.states.has(g.steam.appid) : g.epic.installed));
-      if (s === "notInstalled") list = list.filter((g) => (isSteam(g) ? !installed.states.has(g.steam.appid) : !g.epic.installed));
+      if (s === "installed") list = list.filter((g) => isInstalled(g));
+      if (s === "notInstalled") list = list.filter((g) => !isInstalled(g));
       if (s === "played") list = list.filter((g) => isSteam(g) && g.hours > 0);
       if (s === "neverPlayed") list = list.filter((g) => isSteam(g) && g.hours === 0);
       if (s === "recent") list = list.filter((g) => isSteam(g) && g.lastPlayed > now - TWO_WEEKS);
@@ -151,6 +178,13 @@
         <option value="hours-asc">Least played</option>
         <option value="recent">Recently played</option>
       </select>
+
+      <!-- Square "+" button: add a game or app from this PC -->
+      <button class="ghost add-btn" onclick={addOwnGame} title="Add an app or game to your library" aria-label="Add an app or game to your library">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 5v14 M5 12h14" />
+        </svg>
+      </button>
 
       <button class="ghost filters-btn" class:on={filtersVisible} onclick={toggleFilters} aria-pressed={filtersVisible}>
         Filters{activeFilters ? ` (${activeFilters})` : ""}
@@ -211,11 +245,16 @@
           {:else}
             <VirtualGrid items={games} itemWidth={160} itemHeight={318} key={(g) => g.key}>
               {#snippet children(item)}
-                {#if item.kind === "steam"}
-                  <GameTile game={item.steam} />
-                {:else}
-                  <EpicTile game={item.epic} />
-                {/if}
+                <!-- Hidden games are faded (only shown with "Show hidden games") -->
+                <div class:faded={isHiddenGame(item.key)}>
+                  {#if item.kind === "steam"}
+                    <GameTile game={item.steam} />
+                  {:else if item.kind === "epic"}
+                    <EpicTile game={item.epic} />
+                  {:else}
+                    <CustomTile game={item.custom} onedit={editOwnGame} />
+                  {/if}
+                </div>
               {/snippet}
             </VirtualGrid>
           {/if}
@@ -224,7 +263,19 @@
     {/if}
 </div>
 
+{#if dialog}
+  <CustomGameDialog path={dialog.path} game={dialog.game ?? null} onclose={() => (dialog = null)} />
+{/if}
+
 <style>
+  .faded { opacity: 0.45; transition: opacity 0.15s; }
+  /* Square "+" button (more specific than button.ghost, so its padding doesn't push the + aside) */
+  button.ghost.add-btn {
+    width: 38px; height: 38px; padding: 0; flex-shrink: 0;
+    display: grid; place-items: center;
+  }
+  button.ghost.add-btn svg { display: block; }
+  .faded:hover { opacity: 1; }
   .page {
     height: calc(100vh - 56px - var(--statusbar-h, 0px));
     display: flex;

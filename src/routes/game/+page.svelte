@@ -6,6 +6,9 @@
   import { fetchGameInfo, fetchReviews, type GameInfo, type Review } from "$lib/gameInfo";
   import NewsRow from "$lib/components/NewsRow.svelte";
   import TrailerPlayer from "$lib/components/TrailerPlayer.svelte";
+  import { presence } from "$lib/discordActivity.svelte";
+  import { onDestroy } from "svelte";
+  onDestroy(() => (presence.game = "")); // leaving the game page
   import { settings } from "$lib/settings.svelte";
   import { playing } from "$lib/playing.svelte";
   import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
@@ -78,6 +81,7 @@
         if (cancelled) return;
         info = r;
         status = "ready";
+        presence.game = r.name ?? ""; // Discord: "Looking at a game · <name>"
       })
       .catch(() => {
         if (!cancelled) status = "error";

@@ -14,13 +14,20 @@
       {
         "title": "Kosmos",
         "width": 1280,
-        "height": 800,
+        "height": 880,
         "minWidth": 1024,
-        "minHeight": 566
+        "minHeight": 566,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/custom-covers/*"
+        ]
+      }
     }
   },
   "plugins": {

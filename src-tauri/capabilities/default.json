@@ -41,8 +41,22 @@
         },
         {
           "url": "steam://openurl/https://steamcommunity.com/groups/*"
+        },
+        {
+          "url": "steam://open/screenshots"
+        },
+        {
+          "url": "steam://open/screenshots/*"
+        },
+        {
+          "url": "steam://open/friends"
+        },
+        {
+          "url": "steam://openurl/https://steamcommunity.com/sharedfiles/filedetails/*"
         }
       ]
-    }
+    },
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }

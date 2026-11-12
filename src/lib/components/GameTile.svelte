@@ -6,7 +6,7 @@
   import { stateOf } from "$lib/installed.svelte";
   import { playing } from "$lib/playing.svelte";
   import { playAndTime, showLaunchTip, hideLaunchTip } from "$lib/launchTime.svelte";
-  import FavoriteStar from "./FavoriteStar.svelte";
+  import TileButtons from "./TileButtons.svelte";
   import { steamKey } from "$lib/favorites.svelte";
 
   let { game }: { game: Game } = $props();
@@ -72,7 +72,7 @@
 </script>
 
 <div class="tile">
-  <FavoriteStar gameKey={steamKey(game.appid)} name={game.name} />
+  <TileButtons gameKey={steamKey(game.appid)} name={game.name} />
   <a class="open" href={"/game?id=" + game.appid}>
     <div class="cover" style="--hue: {hue}">
       {#if current}

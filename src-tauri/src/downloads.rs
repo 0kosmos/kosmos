@@ -181,7 +181,7 @@ fn has_files(root: &std::path::Path) -> bool {
 }
 
 /// Total size of all files in a folder and its subfolders (shortcuts/links are not followed)
-fn folder_size(root: &std::path::Path) -> u64 {
+pub(crate) fn folder_size(root: &std::path::Path) -> u64 {
     let mut total = 0;
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {

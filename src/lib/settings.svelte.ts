@@ -34,9 +34,11 @@ interface Settings {
   accent: Accent; // color of buttons, switches and links
   librarySteam: boolean; // show Steam games in the Library
   libraryEpic: boolean; // show games installed with the Epic Games Launcher
+  libraryCustom: boolean; // show games you added yourself
   storeEpicFree: boolean; // Epic Games free games in the Store (off unless turned on; Steam is always shown)
   statusBar: boolean; // thin bar at the bottom: time, version, CPU and memory
   showVideos: boolean; // trailers on game pages (off by default: videos are heavy)
+  discordActivity: boolean; // show "Browsing the library" etc. in your Discord activity
   timeZone: string; // time zone for the status bar clock, e.g. "Europe/Rome" ("" = this PC's)
   sidebarWidth: number; // px, dragged with the handle on the sidebar's right edge
 }
@@ -52,7 +54,7 @@ const ALL_IDS = TABS.map((t) => t.id);
 function defaults(): Settings {
   const enabled = {} as Record<TabId, boolean>;
   for (const id of ALL_IDS) enabled[id] = true;
-  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", librarySteam: true, libraryEpic: true, storeEpicFree: false, statusBar: true, showVideos: false, timeZone: "", sidebarWidth: SIDEBAR_MIN };
+  return { order: [...ALL_IDS], enabled, reduceMotion: windowsReducesMotion(), liveStats: false, closeToTray: false, storeRegion: "", storeExclude: [3, 4], storePlatform: "any", theme: "dark", accent: "mono", librarySteam: true, libraryEpic: true, libraryCustom: true, storeEpicFree: false, statusBar: true, showVideos: false, discordActivity: true, timeZone: "", sidebarWidth: SIDEBAR_MIN };
 }
 
 // On first launch, start out matching Windows' "Show animations" setting
@@ -91,9 +93,11 @@ function load(): Settings {
       theme,
       librarySteam: saved.librarySteam !== false,
       libraryEpic: saved.libraryEpic !== false,
+      libraryCustom: saved.libraryCustom !== false,
       storeEpicFree: saved.storeEpicFree === true,
       statusBar: saved.statusBar !== false,
       showVideos: saved.showVideos === true,
+      discordActivity: saved.discordActivity !== false,
       timeZone: validZone(saved.timeZone) ? saved.timeZone : "",
       accent: ACCENTS.some((a) => a.id === saved.accent) ? saved.accent : "mono",
       sidebarWidth: clampSidebar(Number(saved.sidebarWidth) || SIDEBAR_MIN),
@@ -108,7 +112,21 @@ function load(): Settings {
   }
 }
 
+/** No settings saved on this PC yet: Kosmos is starting for the first time (welcome setup) */
+export const isFirstStart: boolean = (() => {
+  try {
+    return localStorage.getItem(KEY) === null;
+  } catch {
+    return false;
+  }
+})();
+
 export const settings: Settings = $state(load());
+
+/** Save the settings as they are now (used when the welcome setup closes) */
+export function saveSettings() {
+  save();
+}
 
 function save() {
   try {
@@ -166,9 +184,10 @@ export function setAccent(accent: Accent) {
   settings.accent = accent;
   save();
 }
-export function setLibrarySource(source: "steam" | "epic", on: boolean) {
+export function setLibrarySource(source: "steam" | "epic" | "custom", on: boolean) {
   if (source === "steam") settings.librarySteam = on;
-  else settings.libraryEpic = on;
+  else if (source === "epic") settings.libraryEpic = on;
+  else settings.libraryCustom = on;
   save();
 }
 /** Is this a time zone Windows / the browser knows? */
@@ -180,6 +199,10 @@ function validZone(z: unknown): z is string {
   } catch {
     return false;
   }
+}
+export function setDiscordActivity(on: boolean) {
+  settings.discordActivity = on;
+  save();
 }
 export function setShowVideos(on: boolean) {
   settings.showVideos = on;

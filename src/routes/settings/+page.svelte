@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { openWelcome } from "$lib/welcome.svelte";
   import {
     settings,
     toggleTab,
@@ -12,6 +13,7 @@
     setAccent,
     setStatusBar,
     setShowVideos,
+    setDiscordActivity,
     setTimeZone,
     ACCENTS,
     setStoreRegion,
@@ -181,6 +183,37 @@
             ></button>
           {/each}
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Welcome setup</h2>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Show the welcome setup again</strong>
+          <p class="dim">The quick setup Kosmos shows the first time it starts.</p>
+        </div>
+        <button class="ghost-btn" onclick={openWelcome}>Show</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Discord</h2>
+    <div class="group">
+      <div class="row">
+        <div>
+          <strong>Show activity on Discord</strong>
+          <p class="dim">
+            While Kosmos is open, Discord shows it in your activity with what you're looking at,
+            like "Browsing the library". Needs the Discord app running on this PC.
+          </p>
+        </div>
+        <button class="switch" role="switch" aria-checked={settings.discordActivity} aria-label="Show activity on Discord" onclick={() => setDiscordActivity(!settings.discordActivity)}>
+          <span class="knob"></span>
+        </button>
       </div>
     </div>
   </section>
@@ -499,4 +532,10 @@
   }
   .segmented button:hover { color: var(--text); }
   .segmented button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); }
+  .ghost-btn {
+    flex-shrink: 0; padding: 6px 14px; font-size: var(--fs-md);
+    background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); transition: border-color 0.15s;
+  }
+  .ghost-btn:hover { border-color: var(--text-dim); }
 </style>

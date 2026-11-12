@@ -1,8 +1,11 @@
 mod appstats;
+mod discord;
+mod custom;
 mod downloads;
 mod epic;
 mod launch;
 mod pcinfo;
+mod screenshots;
 mod stats;
 mod tray;
 mod watch;
@@ -114,9 +117,19 @@ pub fn run() {
         // Updates: checks the latest release on GitHub; "process" restarts Kosmos afterwards
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // "Open file" window, for adding your own games to the Library
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             running_app,
             appstats::app_usage,
+            custom::custom_file_info,
+            custom::custom_cover_save,
+            custom::custom_cover_delete,
+            custom::custom_launch,
+            screenshots::steam_screenshots,
+            screenshots::screenshot_save,
+            screenshots::screenshot_copy,
+            discord::discord_activity,
             launch::launch_inputs,
             launch::system_info,
             launch::measure_launch,
@@ -139,6 +152,25 @@ pub fn run() {
 
             // Tell the app right away when Steam or Epic install files change (Downloads dot etc.)
             watch::start(_app.handle().clone());
+
+            // Starting size: 1280 x 880 (tall enough for the Library's news row), centered.
+            // On smaller screens (or with Windows scaling at 125% / 150%) shrink it to fit the
+            // space above the taskbar, so the window never starts partly off screen.
+            {
+                use tauri::Manager;
+                if let Some(win) = _app.get_webview_window("main") {
+                    if let Ok(Some(screen)) = win.current_monitor() {
+                        let scale = screen.scale_factor();
+                        let area = screen.work_area().size;
+                        let free_w = area.width as f64 / scale - 40.0;
+                        let free_h = area.height as f64 / scale - 50.0; // room for the title bar
+                        let w = 1280f64.min(free_w).max(1024.0);
+                        let h = 880f64.min(free_h).max(566.0);
+                        let _ = win.set_size(tauri::LogicalSize::new(w, h));
+                        let _ = win.center();
+                    }
+                }
+            }
 
             // The installer registers kosmos:// links with Windows. In dev builds there's no
             // installer, so register them here (only for the current Windows user).

@@ -6,6 +6,8 @@
   import { epic } from "$lib/epic.svelte";
   import { settings, setLibrarySource } from "$lib/settings.svelte";
   import { isFavorite, steamKey, epicKey } from "$lib/favorites.svelte";
+  import { custom } from "$lib/customGames.svelte";
+  import { hidden } from "$lib/hidden.svelte";
 
   // Checkbox filters on the left of the Library (like Steam store filters).
   // A game must match everything that's ticked.
@@ -32,6 +34,12 @@
         if (g.hours > 0) c.played++;
         else c.neverPlayed++;
         if (g.lastPlayed > now - TWO_WEEKS) c.recent++;
+      }
+    }
+    if (settings.libraryCustom) {
+      for (const g of custom.games) {
+        if (isFavorite("c" + g.id)) c.favorites++;
+        c.installed++;
       }
     }
     if (settings.libraryEpic) {
@@ -96,6 +104,21 @@
       <span class="name">Epic Games</span>
       <span class="n">{epic.games.length}</span>
     </label>
+    {#if custom.games.length}
+      <label class="check">
+        <input type="checkbox" checked={settings.libraryCustom} onchange={() => setLibrarySource("custom", !settings.libraryCustom)} />
+        <span class="name">My games</span>
+        <span class="n">{custom.games.length}</span>
+      </label>
+    {/if}
+    {#if hidden.library.length}
+      <!-- Bring hidden games back (faded) so they can be unhidden -->
+      <label class="check">
+        <input type="checkbox" bind:checked={hidden.showInLibrary} />
+        <span class="name">Show hidden games</span>
+        <span class="n">{hidden.library.length}</span>
+      </label>
+    {/if}
 
     <h3>Status</h3>
     {#each STATUS as s}

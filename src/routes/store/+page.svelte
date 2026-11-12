@@ -7,6 +7,10 @@
   } from "$lib/store";
   import { settings, setStoreEpic } from "$lib/settings.svelte";
   import { loadEpic } from "$lib/epic.svelte";
+  import { hidden as hiddenGames, isHiddenInStore } from "$lib/hidden.svelte";
+
+  // Games you hid don't show anywhere in the Store, unless "Show hidden games" is ticked
+  const shown = (list: StoreGame[]) => (hiddenGames.showInStore ? list : list.filter((g) => !isHiddenInStore(g.appid)));
 
   // ---------- Epic Games: free games (only loaded while Epic is turned on) ----------
   let epicFree = $state<EpicFreeGame[]>([]);
@@ -382,7 +386,7 @@
         <p class="dim">{hiddenCount ? "All matching games on this page are hidden by your settings." : "No games found."}</p>
       {:else}
         <div class="grid">
-          {#each found as g (g.appid)}<StoreCard game={g} />{/each}
+          {#each shown(found) as g (g.appid)}<StoreCard game={g} />{/each}
         </div>
       {/if}
       {#if searchStatus === "ready" && searchNext >= 0}
@@ -429,7 +433,7 @@
         <div class="carousel">
           <button class="nav left" onclick={() => scrollDeals(-1)} aria-label="Scroll deals left">‹</button>
           <div class="deals" bind:this={dealsRow}>
-            {#each deals as g (g.appid)}<div class="deal"><StoreCard game={g} /></div>{/each}
+            {#each shown(deals) as g (g.appid)}<div class="deal"><StoreCard game={g} /></div>{/each}
           </div>
           <button class="nav right" onclick={() => scrollDeals(1)} aria-label="Scroll deals right">›</button>
         </div>
@@ -454,7 +458,7 @@
         <div class="carousel">
           <button class="nav left" onclick={() => scrollUpcoming(-1)} aria-label="Scroll upcoming games left">‹</button>
           <div class="deals" bind:this={upcomingRow}>
-            {#each upcoming as g (g.appid)}<div class="deal"><StoreCard game={g} /></div>{/each}
+            {#each shown(upcoming) as g (g.appid)}<div class="deal"><StoreCard game={g} /></div>{/each}
             {#if upcomingNext >= 0}
               <div class="deal">
                 <button class="more-card" onclick={loadMoreUpcoming} disabled={upcomingMore}>
@@ -494,6 +498,9 @@
 
             <label class="check"><input type="checkbox" bind:checked={f.discounted} onchange={saveFilters} /> Discounted only</label>
             <label class="check"><input type="checkbox" bind:checked={f.free} onchange={saveFilters} /> Free to play only</label>
+            {#if hiddenGames.store.length}
+              <label class="check"><input type="checkbox" bind:checked={hiddenGames.showInStore} /> Show hidden games ({hiddenGames.store.length})</label>
+            {/if}
 
             <h4>Reviews</h4>
             {#each [[0, "Any"], [70, "70% positive or more"], [80, "80% or more"], [90, "90% or more"]] as [v, l]}
@@ -527,7 +534,7 @@
             <p class="dim">No games match these filters. <button class="link" onclick={clearFilters}>Clear filters</button></p>
           {:else}
             <div class="grid" class:faded={browseStatus === "loading"}>
-              {#each results as g (g.appid)}<StoreCard game={g} />{/each}
+              {#each shown(results) as g (g.appid)}<StoreCard game={g} />{/each}
             </div>
             {#if next >= 0}
               <button class="more" onclick={loadMore} disabled={loadingMore}>

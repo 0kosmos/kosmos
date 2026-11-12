@@ -10,6 +10,12 @@
   import { listenForLaunchTimes, hideLaunchTip } from "$lib/launchTime.svelte";
   import LaunchTip from "$lib/components/LaunchTip.svelte";
   import StatusBar from "$lib/components/StatusBar.svelte";
+  import { updateDiscord, presence } from "$lib/discordActivity.svelte";
+  import { library } from "$lib/library.svelte";
+  import { epic } from "$lib/epic.svelte";
+  import { custom } from "$lib/customGames.svelte";
+  import { welcome } from "$lib/welcome.svelte";
+  import Welcome from "$lib/components/Welcome.svelte";
   import { invoke } from "@tauri-apps/api/core";
 
   // Tell the Rust side what X should do (and show/hide the tray icon) at start and on change
@@ -45,6 +51,16 @@
     document.documentElement.style.setProperty("--sidebar-w", settings.sidebarWidth + "px");
   });
 
+  // Discord activity: what you're looking at (only these values are read; nothing is written)
+  $effect(() => {
+    presence.game;
+    const games =
+      (settings.librarySteam ? library.games.length : 0) +
+      (settings.libraryEpic ? epic.games.length : 0) +
+      (settings.libraryCustom ? custom.games.length : 0);
+    updateDiscord(settings.discordActivity, page.url.pathname, games);
+  });
+
   // Height of the status bar, so full-height pages (like the Library) leave room for it
   $effect(() => {
     document.documentElement.style.setProperty("--statusbar-h", settings.statusBar ? "26px" : "0px");
@@ -66,6 +82,9 @@
     {#if settings.statusBar}<StatusBar />{/if}
   </div>
 </div>
+
+<!-- First start: welcome setup in the middle of the window -->
+{#if welcome.open}<Welcome />{/if}
 
 <!-- Launch-time tooltip for Play buttons (only drawn while hovering one) -->
 <LaunchTip />
