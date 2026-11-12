@@ -135,9 +135,12 @@
   let status = $state<"loading" | "ready" | "error" | "busy">("loading");
   let loadingMore = $state(false);
 
-  // Depends only on queryKey; writes results it never reads (so it can't loop)
+  let retry = $state(0); // "Try again" adds 1, which runs the search again
+
+  // Depends only on queryKey (and Try again); writes results it never reads (so it can't loop)
   $effect(() => {
     const key = queryKey;
+    retry;
     status = "loading";
     let cancelled = false;
     const timer = setTimeout(() => {
@@ -301,9 +304,12 @@
       {#if status === "loading" && !items.length}
         <p class="dim">Loading the market...</p>
       {:else if status === "busy"}
-        <p class="dim">The Steam Market is busy right now (Steam limits how often it can be asked). Try again in a minute.</p>
+        <p class="dim">
+          The Steam Market is busy right now (Steam limits how often it can be asked). Try again in a minute.
+          <button class="link" onclick={() => retry++}>Try again</button>
+        </p>
       {:else if status === "error"}
-        <p class="dim">Couldn't load the market right now.</p>
+        <p class="dim">Couldn't load the market right now. <button class="link" onclick={() => retry++}>Try again</button></p>
       {:else if items.length === 0}
         <p class="dim">No items match. {#if activeFilters}<button class="link" onclick={clearFilters}>Clear filters</button>{/if}</p>
       {:else}

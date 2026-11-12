@@ -61,30 +61,6 @@
     updateDiscord(settings.discordActivity, page.url.pathname, games);
   });
 
-  // ---------- Memory saver ----------
-  // While Kosmos is minimized or hidden in the tray, the page engine is asked to use as little
-  // memory as it can (it lets go of cached pictures and pages). Back to normal when you open it.
-  // After leaving a picture-heavy page (Screenshots, Inventory, Market, Store) it is asked once,
-  // briefly, to tidy up, so those pictures don't stay in memory.
-  const setPageMemory = (low: boolean) => invoke("page_memory", { low }).catch(() => {});
-  onMount(() => {
-    const onVisibility = () => setPageMemory(document.visibilityState === "hidden");
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  });
-  const HEAVY = ["/screenshots", "/inventory", "/market", "/store"];
-  let lastPath = "";
-  let tidyTimer: ReturnType<typeof setTimeout> | undefined;
-  $effect(() => {
-    const path = page.url.pathname;
-    if (HEAVY.includes(lastPath) && path !== lastPath && document.visibilityState === "visible") {
-      setPageMemory(true);
-      clearTimeout(tidyTimer);
-      tidyTimer = setTimeout(() => setPageMemory(document.visibilityState === "hidden"), 1500);
-    }
-    lastPath = path;
-  });
-
   // Height of the status bar, so full-height pages (like the Library) leave room for it
   $effect(() => {
     document.documentElement.style.setProperty("--statusbar-h", settings.statusBar ? "26px" : "0px");

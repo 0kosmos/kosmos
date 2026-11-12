@@ -57,9 +57,11 @@ const memory = new Map<string, { data: unknown; at: number }>();
 async function get<T>(path: string): Promise<T> {
   const hit = memory.get(path);
   if (hit && Date.now() - hit.at < TTL) return hit.data as T;
-  const res = await fetch(API_BASE + path);
+  // If Steam doesn't answer within 20 s, give up (the page offers "Try again")
+  const res = await fetch(API_BASE + path, { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error("Request failed");
-  const data = (await res.json()) as T;
+  const data = (await res.json()) as T & { busy?: boolean };
+  if (data.busy) return data; // "Steam is busy" is never kept: next time we ask again
   if (memory.size > 60) memory.delete(memory.keys().next().value!);
   memory.set(path, { data, at: Date.now() });
   return data;
