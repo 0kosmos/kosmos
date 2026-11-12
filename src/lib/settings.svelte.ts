@@ -1,6 +1,15 @@
 import { TABS, type TabId } from "./tabs";
 
-export type Theme = "dark" | "light";
+export type Theme = "dark" | "dim" | "grey" | "light";
+/** Themes offered in Settings and the welcome setup (the colors are in app.css) */
+export const THEMES: { id: Theme; label: string }[] = [
+  { id: "dark", label: "Black" },
+  { id: "dim", label: "Dark grey" },
+  { id: "grey", label: "Grey" },
+  { id: "light", label: "White" },
+];
+/** Is this one of the light themes? (accent colors use their deeper versions there) */
+export const isLightTheme = (t: Theme) => t === "light" || t === "grey";
 export type Accent =
   | "mono" | "red" | "orange" | "amber" | "emerald" | "teal"
   | "cyan" | "blue" | "indigo" | "violet" | "pink" | "rose";
@@ -82,7 +91,7 @@ function load(): Settings {
     const enabled = { ...base.enabled, ...saved.enabled };
     enabled.library = true; // Library can never be turned off
 
-    const theme: Theme = saved.theme === "light" ? "light" : "dark";
+    const theme: Theme = THEMES.some((t) => t.id === saved.theme) ? saved.theme : "dark";
 
     return {
       order,

@@ -34,6 +34,7 @@
     setStoreEpic,
     setCloseToTray,
     setTheme,
+    THEMES,
     setAccent,
     setStatusBar,
     setShowVideos,
@@ -188,11 +189,12 @@
       <div class="row">
         <div>
           <strong>Theme</strong>
-          <p class="dim">Black is the default. White is easier to read in bright rooms.</p>
+          <p class="dim">Black is the default. The grey ones are softer on the eyes; White is easiest to read in bright rooms.</p>
         </div>
         <div class="segmented" role="radiogroup" aria-label="Theme">
-          <button role="radio" aria-checked={settings.theme === "dark"} onclick={() => setTheme("dark")}>Black</button>
-          <button role="radio" aria-checked={settings.theme === "light"} onclick={() => setTheme("light")}>White</button>
+          {#each THEMES as t (t.id)}
+            <button role="radio" aria-checked={settings.theme === t.id} onclick={() => setTheme(t.id)}>{t.label}</button>
+          {/each}
         </div>
       </div>
       <div class="row">

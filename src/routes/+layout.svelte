@@ -1,7 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import Sidebar from "$lib/components/Sidebar.svelte";
-  import { settings } from "$lib/settings.svelte";
+  import { settings, isLightTheme } from "$lib/settings.svelte";
   import { TABS } from "$lib/tabs";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -44,6 +44,7 @@
 
   $effect(() => {
     document.documentElement.dataset.theme = settings.theme;
+    document.documentElement.dataset.tone = isLightTheme(settings.theme) ? "light" : "dark";
   });
 
   $effect(() => {

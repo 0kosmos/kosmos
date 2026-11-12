@@ -9,7 +9,9 @@
       // Apply the saved theme before anything is drawn, so there is no flash of the wrong theme.
       try {
         var s = JSON.parse(localStorage.getItem("kosmos-settings-v1") || "{}");
-        document.documentElement.dataset.theme = s.theme === "light" ? "light" : "dark";
+        var t = ["dark", "dim", "grey", "light"].indexOf(s.theme) >= 0 ? s.theme : "dark";
+        document.documentElement.dataset.theme = t;
+        document.documentElement.dataset.tone = t === "light" || t === "grey" ? "light" : "dark";
         document.documentElement.dataset.accent = s.accent || "mono";
         // Saved sidebar width, so the layout doesn't jump on start
         var w = Number(s.sidebarWidth);
@@ -17,6 +19,7 @@
         if (s.statusBar === false) document.documentElement.style.setProperty("--statusbar-h", "0px");
       } catch (e) {
         document.documentElement.dataset.theme = "dark";
+        document.documentElement.dataset.tone = "dark";
         document.documentElement.dataset.accent = "mono";
       }
     </script>

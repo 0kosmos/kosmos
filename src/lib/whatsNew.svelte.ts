@@ -27,11 +27,26 @@ export async function checkWhatsNew() {
   }
   // First start on this PC, or already seen this version: nothing to show
   if (isFirstStart || seen === version) return;
-  const release = CHANGELOG.find((r) => r.version === version);
-  if (release) {
-    whatsNew.release = release;
-    whatsNew.open = true;
+  // Every version you missed (e.g. 0.2.0 -> 0.4.0 shows the notes of 0.3.0 and 0.4.0 together)
+  const missed = CHANGELOG.filter((r) => newer(r.version, seen ?? "0.0.0") && !newer(r.version, version));
+  if (!missed.length) return;
+  whatsNew.release = {
+    version,
+    new: missed.flatMap((r) => r.new),
+    improved: missed.flatMap((r) => r.improved),
+    fixed: missed.flatMap((r) => r.fixed),
+  };
+  whatsNew.open = true;
+}
+
+/** Is version a newer than version b? ("0.10.0" is newer than "0.9.0") */
+function newer(a: string, b: string) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
   }
+  return false;
 }
 
 /** Settings → "What's new": the notes of this version (or the newest notes there are) */

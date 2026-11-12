@@ -2,8 +2,11 @@
    Every color in the app comes from these variables.
    The theme is picked by <html data-theme="...">:
    - "dark"  (default): true black
+   - "dim":  dark grey
+   - "grey": light grey
    - "light": white
-   Switching only changes the attribute, so it is instant. */
+   <html data-tone="dark" | "light"> says whether the theme is dark or light, so accent colors
+   use their brighter or deeper version. Switching only changes attributes, so it is instant. */
 
 :root {
   /* Black theme (default). Pure neutral greys, no color tint, to match the logo. */
@@ -59,6 +62,42 @@
   color-scheme: light;
 }
 
+/* Dark grey: a soft charcoal, easier on the eyes than pure black */
+:root[data-theme="dim"] {
+  --bg: #19191c;
+  --surface: #222226;
+  --surface-2: #2c2c31;
+  --border: #37373d;
+  --text: #ececee;
+  --text-dim: #9b9ba3;
+  --hover: rgba(255, 255, 255, 0.06);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%239b9ba3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme: dark;
+}
+
+/* Grey: a light grey, gentler than bright white */
+:root[data-theme="grey"] {
+  --bg: #d6d6da;
+  --surface: #e6e6e9;
+  --surface-2: #d9d9dd;
+  --border: #c2c2c8;
+  --text: #18181b;
+  --text-dim: #54545c;
+  --accent: #171717;
+  --on-accent: #ffffff;
+  --good: #15803d;
+  --warn: #c2410c;
+  --fav: #a16207;
+  --heart: #be185d;
+  --bad: #dc2626;
+  --knob: #ffffff;
+  --hover: rgba(0, 0, 0, 0.05);
+  --scrim: rgba(20, 20, 20, 0.45);
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2354545c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme: light;
+}
+
 /* ---------- Accent colors ----------
    The color of buttons, switches, links and the open tab. Picked by data-accent="..."
    (on <html> for the whole app, or on any element, e.g. the color swatches in Settings).
@@ -77,18 +116,18 @@
 [data-accent="indigo"] { --accent: #818cf8; --on-accent: #000000; }
 [data-accent="pink"] { --accent: #f472b6; --on-accent: #000000; }
 
-[data-theme="light"][data-accent="mono"], [data-theme="light"] [data-accent="mono"] { --accent: #171717; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="violet"], [data-theme="light"] [data-accent="violet"] { --accent: #7c3aed; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="teal"], [data-theme="light"] [data-accent="teal"] { --accent: #0d9488; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="amber"], [data-theme="light"] [data-accent="amber"] { --accent: #c2690a; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="rose"], [data-theme="light"] [data-accent="rose"] { --accent: #e11d48; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="blue"], [data-theme="light"] [data-accent="blue"] { --accent: #2563eb; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="red"], [data-theme="light"] [data-accent="red"] { --accent: #dc2626; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="orange"], [data-theme="light"] [data-accent="orange"] { --accent: #ea580c; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="emerald"], [data-theme="light"] [data-accent="emerald"] { --accent: #059669; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="cyan"], [data-theme="light"] [data-accent="cyan"] { --accent: #0891b2; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="indigo"], [data-theme="light"] [data-accent="indigo"] { --accent: #4f46e5; --on-accent: #ffffff; }
-[data-theme="light"][data-accent="pink"], [data-theme="light"] [data-accent="pink"] { --accent: #db2777; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="mono"], [data-tone="light"] [data-accent="mono"] { --accent: #171717; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="violet"], [data-tone="light"] [data-accent="violet"] { --accent: #7c3aed; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="teal"], [data-tone="light"] [data-accent="teal"] { --accent: #0d9488; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="amber"], [data-tone="light"] [data-accent="amber"] { --accent: #c2690a; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="rose"], [data-tone="light"] [data-accent="rose"] { --accent: #e11d48; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="blue"], [data-tone="light"] [data-accent="blue"] { --accent: #2563eb; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="red"], [data-tone="light"] [data-accent="red"] { --accent: #dc2626; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="orange"], [data-tone="light"] [data-accent="orange"] { --accent: #ea580c; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="emerald"], [data-tone="light"] [data-accent="emerald"] { --accent: #059669; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="cyan"], [data-tone="light"] [data-accent="cyan"] { --accent: #0891b2; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="indigo"], [data-tone="light"] [data-accent="indigo"] { --accent: #4f46e5; --on-accent: #ffffff; }
+[data-tone="light"][data-accent="pink"], [data-tone="light"] [data-accent="pink"] { --accent: #db2777; --on-accent: #ffffff; }
 
 * {
   box-sizing: border-box;
