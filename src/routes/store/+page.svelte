@@ -8,6 +8,27 @@
   import { settings, setStoreEpic } from "$lib/settings.svelte";
   import { loadEpic } from "$lib/epic.svelte";
   import { hidden as hiddenGames, isHiddenInStore } from "$lib/hidden.svelte";
+  import { wishlist, toggleWishGame } from "$lib/wishlist.svelte";
+  import WishlistPopup from "$lib/components/WishlistPopup.svelte";
+  import { goto } from "$app/navigation";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { account } from "$lib/account.svelte";
+
+  // ---------- Wishlist pop-up ----------
+  let wishOpen = $state(false);
+  const wishRows = $derived(
+    wishlist.games.map((g) => ({ key: String(g.appid), image: g.image, name: g.name, sub: "Added " + new Date(g.added).toLocaleDateString(), price: g.priceText }))
+  );
+  function openWished(key: string) {
+    wishOpen = false;
+    goto("/game?id=" + key);
+  }
+  function removeWished(key: string) {
+    const g = wishlist.games.find((x) => String(x.appid) === key);
+    if (g) toggleWishGame(g);
+  }
+  const steamWishlist = () =>
+    openUrl(`steam://openurl/https://store.steampowered.com/wishlist/profiles/${account.steamid}/`).catch(() => {});
 
   // Games you hid don't show anywhere in the Store, unless "Show hidden games" is ticked
   const shown = (list: StoreGame[]) => (hiddenGames.showInStore ? list : list.filter((g) => !isHiddenInStore(g.appid)));
@@ -342,6 +363,9 @@
         </button>
       {/if}
     {/if}
+    <button class="wish-btn" onclick={() => (wishOpen = true)} title="Games you saved with ♡">
+      ♡ Wishlist{wishlist.games.length ? ` (${wishlist.games.length})` : ""}
+    </button>
     <!-- Show Epic's free games (same switch as Settings → Store) -->
     <label class="source">
       <input type="checkbox" checked={settings.storeEpicFree} onchange={() => setStoreEpic(!settings.storeEpicFree)} />
@@ -548,7 +572,33 @@
   {/if}
 </div>
 
+{#if wishOpen}
+  <WishlistPopup
+    title="Wishlist"
+    rows={wishRows}
+    empty="Nothing here yet. Hover a game in the Store (or open its page) and click ♡ to save it."
+    onopen={openWished}
+    onremove={removeWished}
+    onclose={() => (wishOpen = false)}
+  >
+    {#snippet footer()}
+      {#if account.steamid}
+        <button class="link" onclick={steamWishlist}>Your Steam wishlist ↗</button>
+        <span class="dim"> · Kosmos's wishlist is separate and saved on this PC.</span>
+      {:else}
+        <span class="dim">Kosmos's wishlist is saved on this PC.</span>
+      {/if}
+    {/snippet}
+  </WishlistPopup>
+{/if}
+
 <style>
+  .wish-btn {
+    margin-left: auto; padding: 7px 12px; border-radius: var(--radius); font-size: var(--fs-md);
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .wish-btn:hover { color: var(--text); border-color: var(--text-dim); }
   .page { max-width: 1400px; }
   .head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .head h1 { margin-right: 6px; }
@@ -572,7 +622,7 @@
 
   /* "Epic Games" checkbox at the top right */
   .source {
-    display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+    display: inline-flex; align-items: center; gap: 8px;
     padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius);
     font-size: var(--fs-md); color: var(--text-dim); cursor: pointer;
     transition: color 0.15s, border-color 0.15s;

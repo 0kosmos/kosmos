@@ -6,6 +6,34 @@
     type MarketItem, type Facet, type MarketQuery,
   } from "$lib/market";
   import { facetApplies, tagApplies, pruneFilters } from "$lib/marketRules";
+  import Heart from "$lib/components/Heart.svelte";
+  import WishlistPopup from "$lib/components/WishlistPopup.svelte";
+  import { wishlist, isWishedItem, toggleWishItem } from "$lib/wishlist.svelte";
+
+  // ---------- Wishlist ----------
+  const wishItem = (it: MarketItem) =>
+    toggleWishItem({
+      appid: it.appid, hash: it.hash, name: it.name, icon: it.icon, color: it.color, game: it.game,
+      type: it.type, priceText: it.priceText, listings: it.listings, usdCents: it.usdCents,
+    });
+  let wishOpen = $state(false);
+  const wishRows = $derived(
+    wishlist.items.map((i) => ({
+      key: i.appid + "|" + i.hash, image: i.icon, name: i.name, color: i.color,
+      sub: i.game || i.type, price: i.priceText, tall: true,
+    }))
+  );
+  const findWished = (key: string) => wishlist.items.find((i) => i.appid + "|" + i.hash === key);
+  function openWished(key: string) {
+    const i = findWished(key);
+    if (!i) return;
+    wishOpen = false;
+    showItem(i);
+  }
+  function removeWished(key: string) {
+    const i = findWished(key);
+    if (i) toggleWishItem(i);
+  }
 
   // ---------- Filters (remembered) ----------
   const SAVE_KEY = "kosmos-market-filters-v2";
@@ -227,6 +255,9 @@
         Filters{activeFilters ? ` (${activeFilters})` : ""}
       </button>
     {/if}
+    <button class="ghost wish-btn" onclick={() => (wishOpen = true)} title="Items you saved with ♡">
+      ♡ Wishlist{wishlist.items.length ? ` (${wishlist.items.length})` : ""}
+    </button>
   </div>
 
   <div class="content" class:with-filters={!narrow} bind:clientWidth={contentW}>
@@ -315,6 +346,8 @@
       {:else}
         <div class="grid" class:faded={status === "loading"}>
           {#each items as it (it.appid + it.hash)}
+            <div class="item-wrap wish-host">
+            <span class="heart"><Heart name={it.name} on={isWishedItem(it.appid, it.hash)} onclick={() => wishItem(it)} /></span>
             <button class="item" onclick={() => showItem(it)}>
               <div class="img">
                 {#if it.icon}<img src={it.icon} alt="" loading="lazy" decoding="async" />{/if}
@@ -326,6 +359,7 @@
                 <span class="listings">{it.listings.toLocaleString()} listed</span>
               </span>
             </button>
+            </div>
           {/each}
         </div>
         {#if next >= 0}
@@ -358,13 +392,37 @@
         <div><span class="dim">Listed</span><strong>{open.listings.toLocaleString()}</strong></div>
       </div>
 
-      <button class="buy" onclick={buy}>Buy on Steam Market</button>
+      <div class="buy-row">
+        <button class="buy" onclick={buy}>Buy on Steam Market</button>
+        <Heart variant="button" name={open.name} on={isWishedItem(open.appid, open.hash)} onclick={() => open && wishItem(open)} />
+      </div>
       <p class="dim small">Opens this item in the Steam client, where you can buy it with your Steam Wallet.</p>
     </div>
   {/if}
 </dialog>
 
+{#if wishOpen}
+  <WishlistPopup
+    title="Market wishlist"
+    rows={wishRows}
+    empty="Nothing here yet. Hover an item and click ♡ to save it."
+    onopen={openWished}
+    onremove={removeWished}
+    onclose={() => (wishOpen = false)}
+  >
+    {#snippet footer()}
+      <span class="dim">Prices are the ones shown when you added the item. Open one to see Steam's current price.</span>
+    {/snippet}
+  </WishlistPopup>
+{/if}
+
 <style>
+  .wish-btn { margin-left: auto; }
+  .item-wrap { position: relative; display: flex; flex-direction: column; }
+  .item-wrap > .item { flex: 1; }
+  .heart { position: absolute; top: 14px; right: 14px; z-index: 1; }
+  .buy-row { display: flex; gap: 8px; align-items: stretch; }
+  .buy-row .buy { flex: 1; }
   .page { max-width: 1500px; }
   .head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .head h1 { margin: 0 6px 0 0; font-size: 1.6rem; font-weight: 700; }

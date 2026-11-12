@@ -18,6 +18,7 @@
   --good: #6fcf8e;
   --warn: #fb923c; /* orange: things that need attention, like updates */
   --fav: #facc15; /* gold: favorite games */
+  --heart: #f472b6; /* pink: wishlist */
   --bad: #f87171;
   --knob: #ffffff; /* the dot inside on/off switches when they're off */
 
@@ -49,6 +50,7 @@
   --good: #16a34a;
   --warn: #ea580c;
   --fav: #d4a106;
+  --heart: #db2777;
   --bad: #dc2626;
   --knob: #ffffff;
   --hover: rgba(0, 0, 0, 0.04);

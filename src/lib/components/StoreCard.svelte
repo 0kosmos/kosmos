@@ -2,6 +2,8 @@
   import type { StoreGame } from "$lib/store";
   import { library } from "$lib/library.svelte";
   import { isHiddenInStore, toggleHiddenInStore } from "$lib/hidden.svelte";
+  import { isWishedGame, toggleWishGame } from "$lib/wishlist.svelte";
+  import Heart from "./Heart.svelte";
 
   // One game in the store: wide image, name, reviews, price (with discount).
   let { game }: { game: StoreGame } = $props();
@@ -16,7 +18,14 @@
 </script>
 
 <!-- The eye button hides this game everywhere in the Store ("Show hidden games" brings it back) -->
-<div class="wrap" class:faded={isHiddenInStore(game.appid)}>
+<div class="wrap wish-host" class:faded={isHiddenInStore(game.appid)}>
+<span class="heart">
+  <Heart
+    name={game.name}
+    on={isWishedGame(game.appid)}
+    onclick={() => toggleWishGame({ appid: game.appid, name: game.name, image: game.image, priceText: game.comingSoon ? game.releaseText || "Coming soon" : game.priceText })}
+  />
+</span>
 <button
   class="hide"
   onclick={() => toggleHiddenInStore(game.appid)}
@@ -69,11 +78,12 @@
 
 <style>
   .wrap { position: relative; display: flex; flex-direction: column; }
+  .heart { position: absolute; top: 8px; right: 8px; z-index: 1; }
   .wrap > .card { flex: 1; }
   .wrap.faded { opacity: 0.45; }
   .wrap.faded:hover { opacity: 1; }
   .hide {
-    position: absolute; top: 8px; right: 8px; z-index: 1;
+    position: absolute; top: 8px; right: 42px; z-index: 1;
     width: 28px; height: 28px; padding: 0; border: none; border-radius: 50%;
     display: grid; place-items: center;
     background: var(--scrim); color: #fff; /* on the picture, same in both themes */

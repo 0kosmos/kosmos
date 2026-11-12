@@ -53,6 +53,9 @@
         },
         {
           "url": "steam://openurl/https://steamcommunity.com/sharedfiles/filedetails/*"
+        },
+        {
+          "url": "steam://openurl/https://store.steampowered.com/wishlist/*"
         }
       ]
     },

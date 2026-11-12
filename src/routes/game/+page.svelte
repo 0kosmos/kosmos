@@ -7,6 +7,8 @@
   import NewsRow from "$lib/components/NewsRow.svelte";
   import TrailerPlayer from "$lib/components/TrailerPlayer.svelte";
   import { presence } from "$lib/discordActivity.svelte";
+  import Heart from "$lib/components/Heart.svelte";
+  import { isWishedGame, toggleWishGame } from "$lib/wishlist.svelte";
   import { onDestroy } from "svelte";
   onDestroy(() => (presence.game = "")); // leaving the game page
   import { settings } from "$lib/settings.svelte";
@@ -327,6 +329,22 @@
             >
               Store page ↗
             </button>
+          {/if}
+
+          {#if !owned && info.available}
+            <!-- Kosmos's own wishlist (the Store's "♡ Wishlist" button lists it) -->
+            <Heart
+              variant="button"
+              name={info.name ?? ""}
+              on={isWishedGame(appid)}
+              onclick={() =>
+                info && toggleWishGame({
+                  appid,
+                  name: info.name ?? "",
+                  image: info.header ?? "",
+                  priceText: info.price?.final ?? (info.comingSoon ? "Coming soon" : ""),
+                })}
+            />
           {/if}
 
           {#if installState === "ready"}
