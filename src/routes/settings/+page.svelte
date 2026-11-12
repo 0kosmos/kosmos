@@ -2,6 +2,7 @@
   import { untrack } from "svelte";
   import { page } from "$app/state";
   import { openWelcome } from "$lib/welcome.svelte";
+  import { showWhatsNew } from "$lib/whatsNew.svelte";
   import {
     settings,
     toggleTab,
@@ -196,7 +197,7 @@
   </section>
 
   <section>
-    <h2>Welcome setup</h2>
+    <h2>Welcome and updates</h2>
     <div class="group">
       <div class="row">
         <div>
@@ -204,6 +205,13 @@
           <p class="dim">The quick setup Kosmos shows the first time it starts.</p>
         </div>
         <button class="ghost-btn" onclick={openWelcome}>Show</button>
+      </div>
+      <div class="row">
+        <div>
+          <strong>What's new</strong>
+          <p class="dim">What changed in this version of Kosmos.</p>
+        </div>
+        <button class="ghost-btn" onclick={showWhatsNew}>Show</button>
       </div>
     </div>
   </section>

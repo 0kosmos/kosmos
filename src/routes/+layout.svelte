@@ -16,6 +16,8 @@
   import { custom } from "$lib/customGames.svelte";
   import { welcome } from "$lib/welcome.svelte";
   import Welcome from "$lib/components/Welcome.svelte";
+  import WhatsNew from "$lib/components/WhatsNew.svelte";
+  import { whatsNew, checkWhatsNew } from "$lib/whatsNew.svelte";
   import { invoke } from "@tauri-apps/api/core";
 
   // Tell the Rust side what X should do (and show/hide the tray icon) at start and on change
@@ -30,6 +32,7 @@
     listenForSignIn();
     watchPlaying();
     listenForLaunchTimes();
+    checkWhatsNew(); // "What's new" pop-up, once after an update
   });
 
   const currentTab = $derived(TABS.find((t) => t.path === page.url.pathname));
@@ -85,6 +88,7 @@
 
 <!-- First start: welcome setup in the middle of the window -->
 {#if welcome.open}<Welcome />{/if}
+{#if whatsNew.open}<WhatsNew />{/if}
 
 <!-- Launch-time tooltip for Play buttons (only drawn while hovering one) -->
 <LaunchTip />
