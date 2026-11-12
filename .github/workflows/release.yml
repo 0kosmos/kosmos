@@ -1,0 +1,52 @@
+# Builds Kosmos and publishes a GitHub release whenever you push a version tag (e.g. v0.2.0).
+# The release gets:
+#   - Kosmos_<version>_x64-setup.exe   the installer people download
+#   - a signature file for it            (signed with your private update key)
+#   - latest.json                        what installed copies of Kosmos check for updates
+# Needs two repository secrets (Settings -> Secrets and variables -> Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           the contents of your kosmos.key file
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: # also lets you start it by hand from the Actions tab
+
+permissions:
+  contents: write # needed to create the release
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Keeps compiled Rust parts between runs, so later builds are much faster
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__ # __VERSION__ = the version in package.json
+          releaseName: Kosmos v__VERSION__
+          releaseBody: |
+            Download the file ending in **_x64-setup.exe** below and run it to install Kosmos.
+            Already have Kosmos? It will offer this update by itself (bottom right of the window).
+          releaseDraft: false
+          prerelease: false
