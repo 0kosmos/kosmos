@@ -10,7 +10,7 @@ Kosmos is built to run smoothly on lower-end PCs too. It installs small, uses li
 
 ## A more organized library
 
-- **Everything in one place:** Steam games, Epic games, and any game or app from your PC that you add yourself (it even uses the app's own icon)
+- **Everything in one place:** Steam games, Epic games, and any game or app from your PC that you add yourself
 - **One search and smart filters:** installed, not installed, played, never played, recently played, Steam tags, and which launcher a game is from
 - **Favorites:** star the games you love and show only those
 - **Hide games** you don't want to see, and bring them back any time
